@@ -1,0 +1,47 @@
+[
+  {
+    "id": "0",
+    "external_id": "",
+    "rels": {
+      "spouses": [],
+      "children": []
+    },
+    "data": {
+      "first name": "Name",
+      "last name": "Surname",
+      "birthday": 1970,
+      "avatar": "https://static8.depositphotos.com/1009634/988/v/950/depositphotos_9883921-stock-illustration-no-user-profile-picture.jpg",
+      "gender": "M"
+    }
+  },
+  {
+    "id": "",
+    "external_id": "qwerty-9876-zxcv-5432",
+    "rels": {
+      "spouses": [],
+      "children": []
+    },
+    "data": {
+      "gender": "M",
+      "first name": "Van A",
+      "last name": "Nguyen",
+      "birthday": "1948",
+      "avatar": ""
+    }
+  },
+  {
+    "id": "",
+    "external_id": "asdfgh-1122-jklm-3344",
+    "rels": {
+      "spouses": [],
+      "children": []
+    },
+    "data": {
+      "gender": "F",
+      "first name": "Thi B",
+      "last name": "Nguyen",
+      "birthday": "1950",
+      "avatar": ""
+    }
+  }
+]

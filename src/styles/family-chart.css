@@ -878,3 +878,20 @@
   margin-top: 5px;
   margin-bottom: 5px;
 }
+
+.f3-link-existing-relative {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.f3-link-existing-search {
+  padding: 4px 6px;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.f3-link-existing-select {
+  width: 100%;
+  /* size="10" đã lo phần chiều cao, css này chỉ để full width */
+}

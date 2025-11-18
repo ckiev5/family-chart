@@ -37,6 +37,24 @@ function create(data) {
     .setFields(["first name","last name","birthday"])
     .setEditFirst(true)  // true = open form on click, false = open info in click
     .setCardClickOpen(f3Card)
+    .setLinkExistingRelConfig({
+      title: "Thêm người từ danh sách có sẵn",
+      select_placeholder: "Chọn một người...",
+      linkRelLabel: (d) => {
+        const first = d.data?.["first name"] ?? "";
+        const last = d.data?.["last name"] ?? "";
+        const birth = d.data?.["birthday"] ? ` (${d.data["birthday"]})` : "";
+
+        // Optional: build a small description from rels
+        const rels = [];
+        if (d.rels?.parents?.length) rels.push("child");
+        if (d.rels?.children?.length) rels.push("parent");
+        if (d.rels?.spouses?.length) rels.push("spouse");
+        const relStr = rels.length ? ` – ${rels.join("/")}` : "";
+
+        return `${first} ${last}${birth}${relStr}`;
+      },
+    })
     // .setNoEdit()  // if you want to just see info form
 
   f3Chart.updateTree({initial: true})

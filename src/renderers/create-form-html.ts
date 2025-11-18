@@ -179,22 +179,48 @@ function fields(form_creator: EditDatumFormCreator | NewRelFormCreator) {
 }
 
 function addLinkExistingRelative(form_creator: EditDatumFormCreator | NewRelFormCreator) {
-  const title = form_creator.linkExistingRelative.hasOwnProperty('title') ? form_creator.linkExistingRelative.title : 'Profile already exists?'
-  const select_placeholder = form_creator.linkExistingRelative.hasOwnProperty('select_placeholder') ? form_creator.linkExistingRelative.select_placeholder : 'Select profile'
-  const options = form_creator.linkExistingRelative.options as SelectField['options']
+  const title = form_creator.linkExistingRelative.hasOwnProperty('title')
+    ? form_creator.linkExistingRelative.title
+    : 'Profile already exists?';
+
+  const select_placeholder = form_creator.linkExistingRelative.hasOwnProperty('select_placeholder')
+    ? form_creator.linkExistingRelative.select_placeholder
+    : 'Select profile';
+
+  const options = form_creator.linkExistingRelative.options as SelectField['options'];
+
+  // Serialize options & placeholder để JS ở dưới có thể đọc lại
+  const dataOptions = encodeURIComponent(JSON.stringify(options));
+  const dataPlaceholder = encodeURIComponent(select_placeholder);
+
   return (`
-    <div>
+    <div
+      class="f3-link-existing-wrapper"
+      data-options="${dataOptions}"
+      data-placeholder="${dataPlaceholder}"
+    >
       <hr>
       <div class="f3-link-existing-relative">
         <label>${title}</label>
-        <select>
+
+        <input
+          type="text"
+          class="f3-link-existing-search"
+          placeholder="Tìm kiếm..."
+        />
+
+        <!-- size="10" => list box hiển thị tối đa 10 dòng, phần còn lại scroll -->
+        <select class="f3-link-existing-select" size="10">
           <option value="">${select_placeholder}</option>
-          ${options.map(option => `<option value="${option.value}">${option.label}</option>`).join('')}
+          ${options
+            .map(option => `<option value="${option.value}">${option.label}</option>`)
+            .join('')}
         </select>
       </div>
     </div>
-  `)
+  `);
 }
+
 
 
 function closeBtn() {
@@ -207,4 +233,69 @@ function closeBtn() {
 
 function spaceDiv() {
   return `<div style="height: 24px;"></div>`
+}
+
+type LinkExistingOption = { value: string; label: string };
+
+function renderLinkExistingOptions(
+  wrapper: HTMLElement,
+  keyword: string,
+) {
+  const select = wrapper.querySelector<HTMLSelectElement>('.f3-link-existing-select');
+  if (!select) return;
+
+  const rawOptions = wrapper.dataset.options
+    ? decodeURIComponent(wrapper.dataset.options)
+    : '[]';
+
+  let options: LinkExistingOption[];
+  try {
+    options = JSON.parse(rawOptions);
+  } catch {
+    options = [];
+  }
+
+  const placeholder = wrapper.dataset.placeholder
+    ? decodeURIComponent(wrapper.dataset.placeholder)
+    : 'Select profile';
+
+  const normalized = keyword.toLowerCase().trim();
+
+  const filtered = normalized
+    ? options.filter(opt =>
+        opt.label.toLowerCase().includes(normalized) ||
+        opt.value.toLowerCase().includes(normalized),
+      )
+    : options;
+
+  // Xóa hết option cũ
+  select.innerHTML = '';
+
+  // Thêm lại placeholder
+  const placeholderOption = document.createElement('option');
+  placeholderOption.value = '';
+  placeholderOption.textContent = placeholder;
+  select.appendChild(placeholderOption);
+
+  // Thêm các option đã lọc
+  filtered.forEach(opt => {
+    const o = document.createElement('option');
+    o.value = opt.value;
+    o.textContent = opt.label;
+    select.appendChild(o);
+  });
+}
+
+// Event delegation: chỉ chạy ở môi trường browser
+if (typeof document !== 'undefined') {
+  document.addEventListener('input', (event) => {
+    const target = event.target as HTMLElement | null;
+    if (!target || !target.classList.contains('f3-link-existing-search')) return;
+
+    const wrapper = target.closest('.f3-link-existing-wrapper') as HTMLElement | null;
+    if (!wrapper) return;
+
+    const input = target as HTMLInputElement;
+    renderLinkExistingOptions(wrapper, input.value || '');
+  });
 }

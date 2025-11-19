@@ -39,8 +39,8 @@ function setupEventListenersBase(formContainer: HTMLElement, form_creator: EditD
   const form = formContainer.querySelector('form')!;
   form.addEventListener('submit', form_creator.onSubmit);
 
-  const cancel_btn = form.querySelector('.f3-cancel-btn')!;
-  cancel_btn.addEventListener('click', onCancel)
+  // const cancel_btn = form.querySelector('.f3-cancel-btn')!;
+  // cancel_btn.addEventListener('click', onCancel)
 
   const close_btn = form.querySelector('.f3-close-btn')!;
   close_btn.addEventListener('click', closeCallback)

@@ -10,11 +10,6 @@ export function getHtmlNew(form_creator: NewRelFormCreator) {
       ${genderRadio(form_creator)}
 
       ${fields(form_creator)}
-      
-      <div class="f3-form-buttons">
-        <button type="button" class="f3-cancel-btn">Cancel</button>
-        <button type="submit">Submit</button>
-      </div>
 
       ${form_creator.linkExistingRelative ? addLinkExistingRelative(form_creator) : ''}
     </form>
@@ -22,22 +17,21 @@ export function getHtmlNew(form_creator: NewRelFormCreator) {
 }
 
 export function getHtmlEdit(form_creator: EditDatumFormCreator) {
+  const readOnlyFormCreator = {
+    ...form_creator,
+    force_info_only: true,
+  } as EditDatumFormCreator & { force_info_only: boolean };
   return (` 
-    <form id="familyForm" class="f3-form ${form_creator.editable ? '' : 'non-editable'}">
+     <form id="familyForm" class="f3-form ${form_creator.editable ? '' : 'non-editable'}">
       ${closeBtn()}
       <div style="text-align: right; display: 'block'">
         ${!form_creator.no_edit ? addRelativeBtn(form_creator) : ''}
         ${form_creator.no_edit ? spaceDiv() : editBtn(form_creator)}
       </div>
 
-      ${genderRadio(form_creator)}
+      ${genderRadio(readOnlyFormCreator)}
 
-      ${fields(form_creator)}
-      
-      <div class="f3-form-buttons">
-        <button type="button" class="f3-cancel-btn">Cancel</button>
-        <button type="submit">Submit</button>
-      </div>
+      ${fields(readOnlyFormCreator)}
 
       ${form_creator.linkExistingRelative ? addLinkExistingRelative(form_creator) : ''}
 
@@ -47,8 +41,6 @@ export function getHtmlEdit(form_creator: EditDatumFormCreator) {
       ${removeRelativeBtn(form_creator)}
     </form>
   `)
-
-  
 }
 
 function deleteBtn(form_creator: EditDatumFormCreator) {
@@ -106,7 +98,8 @@ function genderRadio(form_creator: EditDatumFormCreator | NewRelFormCreator) {
 }
 
 function fields(form_creator: EditDatumFormCreator | NewRelFormCreator) {
-  if (!form_creator.editable) return infoField()
+  const forceInfoOnly = (form_creator as any).force_info_only === true;
+  if (!form_creator.editable || forceInfoOnly) return infoField()
   let fields_html = ''
   form_creator.fields.forEach(field => {
     if (field.type === 'text') {

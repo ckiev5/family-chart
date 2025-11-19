@@ -24,19 +24,49 @@ fetch('../../data/data.json')
   .then(data => create(data))
   .catch(err => console.error(err))
 
+function findTopMostMaleId(data) {
+  if (!Array.isArray(data) || data.length === 0) return null;
+
+  const isRoot = (d) => {
+    const rels = d.rels || {};
+    return !rels.father && !rels.mother;
+  };
+
+  const roots = data.filter(isRoot);
+  if (roots.length === 0) {
+    // Không có ai là root → fallback node đầu tiên
+    return data[0].id;
+  }
+
+  // Ưu tiên giới tính Nam
+  const maleRoots = roots.filter((d) => {
+    const g = (d.data?.gender || '').toUpperCase();
+    return g === 'M' || g === 'NAM';
+  });
+
+  if (maleRoots.length === 0) {
+    // Không có Nam ở tầng root → lấy root đầu tiên
+    return roots[0].id;
+  }
+
+  // Có nhiều Nam root → tạm lấy người đầu tiên
+  return maleRoots[0].id;
+}
+
 function create(data) {
   const f3Chart = f3.createChart('#FamilyChart', data)
     .setTransitionTime(1000)
     .setCardXSpacing(250)
-    .setCardYSpacing(150)
+    .setCardYSpacing(150);
 
   const f3Card = f3Chart.setCardHtml()
-    .setCardDisplay([["first name","last name"],["birthday"]])
+    .setCardDisplay([["first name","last name"],["birthday"]]);
 
   const f3EditTree = f3Chart.editTree()
     .setFields(["first name","last name","birthday"])
-    .setEditFirst(true)  // true = open form on click, false = open info in click
+    .setEditFirst(true)  // click card mở form edit
     .setCardClickOpen(f3Card)
+    .fixed()
     .setLinkExistingRelConfig({
       title: "Thêm người từ danh sách có sẵn",
       select_placeholder: "Chọn một người...",
@@ -45,7 +75,6 @@ function create(data) {
         const last = d.data?.["last name"] ?? "";
         const birth = d.data?.["birthday"] ? ` (${d.data["birthday"]})` : "";
 
-        // Optional: build a small description from rels
         const rels = [];
         if (d.rels?.parents?.length) rels.push("child");
         if (d.rels?.children?.length) rels.push("parent");
@@ -54,12 +83,29 @@ function create(data) {
 
         return `${first} ${last}${birth}${relStr}`;
       },
-    })
-    // .setNoEdit()  // if you want to just see info form
+    });
 
-  f3Chart.updateTree({initial: true})
-  f3EditTree.open(f3Chart.getMainDatum())
-  f3Chart.updateTree({initial: true})
+  // 👉 1. Tìm ông Nam “cao nhất”
+  const fixedMainId = findTopMostMaleId(data);
+
+  if (fixedMainId) {
+    // 👉 2. Monkey-patch updateMainId để ở đâu gọi cũng luôn về fixedMainId
+    const originalUpdateMainId = f3Chart.updateMainId.bind(f3Chart);
+
+    f3Chart.updateMainId = function (_anyId) {
+      // luôn set main là fixedMainId, bỏ qua param truyền vào
+      return originalUpdateMainId(fixedMainId);
+    };
+
+    // Set main lần đầu
+    f3Chart.updateMainId(fixedMainId);
+  }
+
+  // 👉 3. Vẽ cây, canh main ở giữa
+  f3Chart.updateTree({ initial: true});
+
+  // Tuỳ bạn có cần auto mở form cho main không:
+  // f3EditTree.open(f3Chart.getMainDatum());
 }
 
 </script>

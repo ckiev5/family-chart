@@ -5,10 +5,9 @@ export interface Datum {
     [key: string]: any;
   };
   rels: {
-    father?: string;
-    mother?: string;
-    spouses?: string[];
-    children?: string[];
+    parents: string[];
+    spouses: string[];
+    children: string[];
   };
   [key: string]: any;
 }

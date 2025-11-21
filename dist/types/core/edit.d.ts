@@ -7,6 +7,7 @@ import { AddRelative } from "./add-relative";
 import { FormCreator, FormCreatorSetupProps } from "../types/form";
 import { CardHtml } from "./cards/card-html";
 import { CardSvg } from "./cards/card-svg";
+import { LegacyDatum } from "../store/format-data";
 type Card = CardHtml | CardSvg;
 declare const _default: (cont: HTMLElement, store: Store) => EditTree;
 export default _default;
@@ -28,7 +29,7 @@ export default _default;
  * const f3EditTree = f3Chart.editTree()  // returns an EditTree instance
  *   .setFields(["first name","last name","birthday"])
  *   .setOnChange(() => {
- *      const updated_data = f3EditTree.getStoreDataCopy()
+ *      const updated_data = f3EditTree.exportData()
  *      // do something with the updated data
  *   })
  * ```
@@ -111,11 +112,17 @@ export declare class EditTree {
     setOnFormCreation(onFormCreation: EditTree['onFormCreation']): this;
     setCreateFormEdit(createFormEdit: EditTree['createFormEdit']): this;
     setCreateFormNew(createFormNew: EditTree['createFormNew']): this;
+    private _getStoreDataCopy;
     /**
-     * Get data copy
-     * @returns The store data
+     * deprecated: use exportData instead. This function will be removed in a future version.
+     * Export the data
+     * @returns family chart data
      */
-    getStoreDataCopy(): any;
+    getStoreDataCopy(): Data | LegacyDatum[];
+    /**
+     * @returns family chart data
+     */
+    exportData(): Data | LegacyDatum[];
     getDataJson(): string;
     updateHistory(): void;
     setPostSubmit(postSubmit: EditTree['postSubmit']): this;

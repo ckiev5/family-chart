@@ -43,4 +43,12 @@ export default function calculateTree(data: Data, { main_id, node_separation, le
 export declare function CalculateTree(options: CalculateTreeOptions & {
     data: Data;
 }): Tree;
+import { LegacyDatum } from "../store/format-data";
+/**
+ * Calculate the tree with v1 data
+ * @param data - The data for the tree
+ * @param options - The options for the tree
+ * @returns The tree
+ */
+export declare function calculateTreeWithV1Data(data: LegacyDatum[], options: CalculateTreeOptions): Tree;
 export {};

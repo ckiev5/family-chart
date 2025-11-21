@@ -1,4 +1,4 @@
-// https://donatso.github.io/family-chart/ v0.8.1 Copyright 2025 donatso
+// https://donatso.github.io/family-chart/ v0.9.0 Copyright 2025 donatso
 (function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3')) :
     typeof define === 'function' && define.amd ? define(['exports', 'd3'], factory) :
@@ -51,7 +51,7 @@
         });
     }
     function otherParent(d, p1, data) {
-        return data.find(d0 => (d0.id !== p1.id) && ((d0.id === d.rels.mother) || (d0.id === d.rels.father)));
+        return data.find(d0 => (d0.id !== p1.id) && (d.rels.parents.includes(d0.id)));
     }
     function calculateEnterAndExitPositions(d, entering, exiting) {
         d.exiting = exiting;
@@ -83,50 +83,12 @@
             }
         }
     }
-    function toggleRels(tree_datum, hide_rels) {
-        const rels = hide_rels ? 'rels' : '_rels';
-        const rels_ = hide_rels ? '_rels' : 'rels';
-        if (tree_datum.is_ancestry || tree_datum.data.main) {
-            showHideAncestry('father');
-            showHideAncestry('mother');
-        }
-        else {
-            showHideChildren();
-        }
-        function showHideAncestry(rel_type) {
-            if (!tree_datum.data[rels] || !tree_datum.data[rels][rel_type])
-                return;
-            if (!tree_datum.data[rels_])
-                tree_datum.data[rels_] = {};
-            tree_datum.data[rels_][rel_type] = tree_datum.data[rels][rel_type];
-            delete tree_datum.data[rels][rel_type];
-        }
-        function showHideChildren() {
-            if (!tree_datum.data[rels] || !tree_datum.data[rels].children)
-                return;
-            const children = tree_datum.data[rels].children.slice(0);
-            const spouses = tree_datum.spouse ? [tree_datum.spouse] : tree_datum.spouses || [];
-            [tree_datum, ...spouses].forEach(sp => children.forEach((ch_id) => {
-                if (sp.data[rels].children.includes(ch_id)) {
-                    if (!sp.data[rels_])
-                        sp.data[rels_] = {};
-                    if (!sp.data[rels_].children)
-                        sp.data[rels_].children = [];
-                    sp.data[rels_].children.push(ch_id);
-                    sp.data[rels].children.splice(sp.data[rels].children.indexOf(ch_id), 1);
-                }
-            }));
-        }
-    }
-    function toggleAllRels(tree_data, hide_rels) {
-        tree_data.forEach(d => { d.data.hide_rels = hide_rels; toggleRels(d, hide_rels); });
-    }
     function setupSiblings({ tree, data_stash, node_separation, sortChildrenFunction }) {
         const main = tree.find(d => d.data.main);
         if (!main)
             throw new Error('no main');
-        const main_father_id = main.data.rels.father;
-        const main_mother_id = main.data.rels.mother;
+        const p1 = main.data.rels.parents[0];
+        const p2 = main.data.rels.parents[1];
         const siblings = findSiblings(main);
         if (siblings.length > 0 && !main.parents)
             throw new Error('no parents');
@@ -136,9 +98,9 @@
             return data_stash.filter(d => {
                 if (d.id === main.data.id)
                     return false;
-                if (main_father_id && d.rels.father === main_father_id)
+                if (p1 && d.rels.parents.includes(p1))
                     return true;
-                if (main_mother_id && d.rels.mother === main_mother_id)
+                if (p2 && d.rels.parents.includes(p2))
                     return true;
                 return false;
             });
@@ -154,12 +116,12 @@
                     depth: main.depth - 1,
                     parents: []
                 };
-                const father = main.parents.find(d => d.data.id === sib.data.rels.father);
-                const mother = main.parents.find(d => d.data.id === sib.data.rels.mother);
-                if (father)
-                    sib.parents.push(father);
-                if (mother)
-                    sib.parents.push(mother);
+                const p1 = main.parents.find(d => d.data.id === sib.data.rels.parents[0]);
+                const p2 = main.parents.find(d => d.data.id === sib.data.rels.parents[1]);
+                if (p1)
+                    sib.parents.push(p1);
+                if (p2)
+                    sib.parents.push(p2);
                 tree.push(sib);
                 siblings_added.push(sib);
             }
@@ -171,21 +133,17 @@
             if (sortChildrenFunction)
                 sorted_siblings.sort((a, b) => sortChildrenFunction(a.data, b.data)); // first sort by custom function if provided
             sorted_siblings.sort((a, b) => {
-                const a_father = main.parents.find(d => d.data.id === a.data.rels.father);
-                const a_mother = main.parents.find(d => d.data.id === a.data.rels.mother);
-                const b_father = main.parents.find(d => d.data.id === b.data.rels.father);
-                const b_mother = main.parents.find(d => d.data.id === b.data.rels.mother);
-                // If a doesn't have mother, it should be to the left
-                if (!a_mother && b_mother)
+                const a_p1 = main.parents.find(d => d.data.id === a.data.rels.parents[0]);
+                const a_p2 = main.parents.find(d => d.data.id === a.data.rels.parents[1]);
+                const b_p1 = main.parents.find(d => d.data.id === b.data.rels.parents[0]);
+                const b_p2 = main.parents.find(d => d.data.id === b.data.rels.parents[1]);
+                if (!a_p2 && b_p2)
                     return -1;
-                // If b doesn't have mother, it should be to the left
-                if (a_mother && !b_mother)
+                if (a_p2 && !b_p2)
                     return 1;
-                // If a doesn't have father, it should be to the right
-                if (!a_father && b_father)
+                if (!a_p1 && b_p1)
                     return 1;
-                // If b doesn't have father, it should be to the right
-                if (a_father && !b_father)
+                if (a_p1 && !b_p1)
                     return -1;
                 // If both have same parents or both missing same parent, maintain original order
                 return 0;
@@ -243,7 +201,7 @@
                     return true;
                 }
                 const rels = d.rels;
-                [rels.father, rels.mother, ...(rels.spouses || [])].forEach(d0_id => {
+                [...rels.parents, ...(rels.spouses || [])].forEach(d0_id => {
                     if (!d0_id)
                         return;
                     if (parents_and_spouses_checked.includes(d0_id))
@@ -270,7 +228,7 @@
                 .filter(d => d && !d._new_rel_data && !d.to_add);
         }
         function hierarchyGetterParents(d) {
-            return [d.rels.father, d.rels.mother]
+            return d.rels.parents
                 .filter(d => d)
                 .map(id => data_stash.find(d => d.id === id))
                 .filter(d => d && !d._new_rel_data && !d.to_add);
@@ -278,7 +236,11 @@
     }
 
     function createNewPerson({ data, rels }) {
-        return { id: generateUUID(), data: data || {}, rels: rels || {} };
+        return {
+            id: generateUUID(),
+            data: data || {},
+            rels: Object.assign({ parents: [], children: [], spouses: [] }, (rels || {}))
+        };
     }
     function createNewPersonWithGenderFromRel({ data, rel_type, rel_datum }) {
         const gender = getGenderFromRelative(rel_datum, rel_type);
@@ -310,7 +272,7 @@
 
     function isAllRelativeDisplayed(d, data) {
         const r = d.data.rels;
-        const all_rels = [r.father, r.mother, ...(r.spouses || []), ...(r.children || [])].filter(v => v);
+        const all_rels = [...r.parents, ...(r.spouses || []), ...(r.children || [])].filter(v => v);
         return all_rels.every(rel_id => data.some(d => d.data.id === rel_id));
     }
     function calculateDelay(tree, d, transition_time) {
@@ -464,7 +426,7 @@
         const p1 = d;
         (d.children || []).forEach(child => {
           const ch_rels = child.data.rels;
-          const p2_id = ch_rels.father === p1.data.id ? ch_rels.mother : ch_rels.father;
+          const p2_id = ch_rels.parents[0] === p1.data.id ? ch_rels.parents[1] : ch_rels.parents[0];
           if (!children_by_spouse[p2_id]) children_by_spouse[p2_id] = [];
           children_by_spouse[p2_id].push(child);
         });
@@ -578,6 +540,67 @@
       }
     }
 
+    function formatData(data) {
+        data.forEach((d) => {
+            if (!d.rels.parents)
+                d.rels.parents = [];
+            if (!d.rels.spouses)
+                d.rels.spouses = [];
+            if (!d.rels.children)
+                d.rels.children = [];
+            convertFatherMotherToParents(d);
+        });
+        return data;
+        function convertFatherMotherToParents(d) {
+            if (!d.rels.parents)
+                d.rels.parents = [];
+            if (d.rels.father)
+                d.rels.parents.push(d.rels.father);
+            if (d.rels.mother)
+                d.rels.parents.push(d.rels.mother);
+            delete d.rels.father;
+            delete d.rels.mother;
+        }
+    }
+    function formatDataForExport(data, legacy_format = false) {
+        data.forEach(d => {
+            var _a;
+            if (legacy_format) {
+                let father;
+                let mother;
+                (_a = d.rels.parents) === null || _a === void 0 ? void 0 : _a.forEach(p => {
+                    const parent = data.find(d => d.id === p);
+                    if (!parent)
+                        throw new Error('Parent not found');
+                    if (parent.data.gender === "M") {
+                        if (!father)
+                            father = parent.id;
+                        else
+                            mother = parent.id; // for same sex parents, we set some parent to father and some to mother
+                    }
+                    if (parent.data.gender === "F") {
+                        if (!mother)
+                            mother = parent.id;
+                        else
+                            father = parent.id; // for same sex parents, we set some parent to father and some to mother
+                    }
+                });
+                if (father)
+                    d.rels.father = father;
+                if (mother)
+                    d.rels.mother = mother;
+                delete d.rels.parents;
+            }
+            if (d.rels.parents && d.rels.parents.length === 0)
+                delete d.rels.parents;
+            if (d.rels.spouses && d.rels.spouses.length === 0)
+                delete d.rels.spouses;
+            if (d.rels.children && d.rels.children.length === 0)
+                delete d.rels.children;
+        });
+        return data;
+    }
+
     function calculateTree(data, { main_id = null, node_separation = 250, level_separation = 150, single_parent_empty_card = true, is_horizontal = false, one_level_rels = false, sortChildrenFunction = undefined, sortSpousesFunction = undefined, ancestry_depth = undefined, progeny_depth = undefined, show_siblings_of_main = false, modifyTreeHierarchy = undefined, private_cards_config = undefined, duplicate_branch_toggle = false, on_toggle_one_close_others = true, }) {
         if (!data || !data.length)
             throw new Error('No data');
@@ -642,7 +665,11 @@
                 return offset;
             }
             function sameParent(a, b) { return a.parent == b.parent; }
-            function sameBothParents(a, b) { return (a.data.rels.father === b.data.rels.father) && (a.data.rels.mother === b.data.rels.mother); }
+            function sameBothParents(a, b) {
+                const parentsA = [...a.data.rels.parents].sort();
+                const parentsB = [...b.data.rels.parents].sort();
+                return parentsA.length === parentsB.length && parentsA.every((p, i) => p === parentsB[i]);
+            }
             function hasSpouses(d) { return d.data.rels.spouses && d.data.rels.spouses.length > 0; }
             function someSpouses(a, b) { return hasSpouses(a) || hasSpouses(b); }
             function hierarchyGetterChildren(d) {
@@ -656,7 +683,11 @@
                 return children;
             }
             function hierarchyGetterParents(d) {
-                return [d.rels.father, d.rels.mother]
+                let parents = [...d.rels.parents];
+                const p1 = data_stash.find(d => d.id === parents[0]);
+                if (p1 && p1.data.gender === "F")
+                    parents.reverse();
+                return parents
                     .filter(d => d).map(id => data_stash.find(d => d.id === id)).filter(d => d !== undefined);
             }
             function offsetOnPartners(a, b) {
@@ -735,7 +766,7 @@
                 if (d.sibling)
                     return;
                 const p1 = d.parent;
-                const p2 = ((p1 === null || p1 === void 0 ? void 0 : p1.spouses) || []).find((d0) => d0.data.id === d.data.rels.father || d0.data.id === d.data.rels.mother);
+                const p2 = ((p1 === null || p1 === void 0 ? void 0 : p1.spouses) || []).find((d0) => d.data.rels.parents.includes(d0.data.id));
                 if (p1 && p2) {
                     if (!p1.added && !p2.added)
                         console.error('no added spouse', p1, p2);
@@ -799,13 +830,10 @@
                 if (d.rels.children && d.rels.children.length > 0) {
                     if (!d.rels.spouses)
                         d.rels.spouses = [];
-                    const is_father = d.data.gender === "M";
                     let to_add_spouse;
                     d.rels.children.forEach(d0 => {
                         const child = data.find(d1 => d1.id === d0);
-                        if (child.rels[is_father ? 'father' : 'mother'] !== d.id)
-                            return;
-                        if (child.rels[!is_father ? 'father' : 'mother'])
+                        if (child.rels.parents.length === 2)
                             return;
                         if (!to_add_spouse) {
                             to_add_spouse = findOrCreateToAddSpouse(d);
@@ -813,7 +841,9 @@
                         if (!to_add_spouse.rels.children)
                             to_add_spouse.rels.children = [];
                         to_add_spouse.rels.children.push(child.id);
-                        child.rels[!is_father ? 'father' : 'mother'] = to_add_spouse.id;
+                        if (child.rels.parents.length !== 1)
+                            throw new Error('child has more than 1 parent');
+                        child.rels.parents.push(to_add_spouse.id);
                     });
                 }
             }
@@ -826,7 +856,7 @@
             function createToAddSpouse(d) {
                 const spouse = createNewPerson({
                     data: { gender: d.data.gender === "M" ? "F" : "M" },
-                    rels: { spouses: [d.id], children: [] }
+                    rels: { spouses: [d.id] }
                 });
                 spouse.to_add = true;
                 to_add_spouses.push(spouse);
@@ -856,34 +886,6 @@
                 }
             }
         }
-        // function setupFromTo(tree:TreeDatum[]) {  // delete
-        //   tree.forEach(d => {
-        //     if (d.data.main) {
-        //       d.to_ancestry = d.parents
-        //     } else if (d.is_ancestry) {
-        //       d.from = [d.parent]
-        //       d.to = d.parents
-        //     } else {
-        //       if (d.added) {
-        //         d.from_spouse = d.spouse
-        //         return
-        //       }
-        //       if (d.sibling) return
-        //       const p1 = d.parent
-        //       const p2 = (d.parent?.spouses || []).find((d0:TreeDatum) => d0.data.id === d.data.rels.father || d0.data.id === d.data.rels.mother)
-        //       d.from = [p1]
-        //       if (p2) d.from.push(p2)
-        //       if (p1) {
-        //         if (!p1.to) p1.to = []
-        //         p1.to.push(d)
-        //       }
-        //       if (p2) {
-        //         if (!p2.to) p2.to = []
-        //         p2.to.push(d)
-        //       }
-        //     }
-        //   })
-        // }
         function handleDuplicateHierarchy(root, data_stash, is_ancestry) {
             if (is_ancestry)
                 handleDuplicateHierarchyAncestry(root, on_toggle_one_close_others);
@@ -916,13 +918,27 @@
      * @deprecated Use f3.calculateTree instead
      */
     function CalculateTree(options) {
-        return calculateTree(options.data, options);
+        return calculateTreeWithV1Data(options.data, options);
+    }
+    /**
+     * Calculate the tree with v1 data
+     * @param data - The data for the tree
+     * @param options - The options for the tree
+     * @returns The tree
+     */
+    function calculateTreeWithV1Data(data, options) {
+        const formatted_data = formatData(data);
+        return calculateTree(formatted_data, options);
     }
 
     function createStore(initial_state) {
         let onUpdate;
         const state = Object.assign({ transition_time: 1000 }, initial_state);
         state.main_id_history = [];
+        if (state.data) {
+            checkIfFmFormat(state.data);
+            formatData(state.data);
+        }
         const store = {
             state,
             updateTree: (props) => {
@@ -935,6 +951,8 @@
                     onUpdate(props);
             },
             updateData: (data) => {
+                checkIfFmFormat(data);
+                formatData(data);
                 state.data = data;
                 validateMainId();
             },
@@ -1045,6 +1063,17 @@
             if (!main_datum)
                 throw new Error("Main datum not found");
             return main_datum;
+        }
+        function checkIfFmFormat(data) {
+            if (state.legacy_format !== undefined)
+                return; // already checked
+            for (let d of data) {
+                if (d.rels.father || d.rels.mother) {
+                    state.legacy_format = true;
+                    return;
+                }
+            }
+            state.legacy_format = false;
         }
     }
 
@@ -1234,7 +1263,7 @@
             return args.map(d => d.tid).sort().join(", "); // make unique id
         }
         function otherParent(child, p1) {
-            const p2 = (p1.spouses || []).find(d => d.data.id === child.data.rels.mother || d.data.id === child.data.rels.father);
+            const p2 = (p1.spouses || []).find(d => child.data.rels.parents.includes(d.data.id));
             return p2;
         }
     }
@@ -1556,20 +1585,14 @@
     }
 
     function cardChangeMain(store, { d }) {
-        toggleAllRels(store.getTree().data, false);
         store.updateMainId(d.data.id);
         store.updateTree({});
         return true;
     }
-    function cardShowHideRels(store, { d }) {
-        d.data.hide_rels = !d.data.hide_rels;
-        toggleRels(d, d.data.hide_rels);
-        store.updateTree({});
-    }
 
     function checkIfRelativesConnectedWithoutPerson(datum, data_stash) {
         const r = datum.rels;
-        const r_ids = [r.father, r.mother, ...(r.spouses || []), ...(r.children || [])].filter(r_id => !!r_id);
+        const r_ids = [...r.parents, ...(r.spouses || []), ...(r.children || [])].filter(r_id => !!r_id);
         for (const r_id of r_ids) {
             const person = data_stash.find(d => d.id === r_id);
             if (!checkIfConnectedToFirstPerson(person, data_stash, [datum.id]))
@@ -1589,7 +1612,7 @@
             if (connected)
                 return;
             const r = d0.rels;
-            const r_ids = [r.father, r.mother, ...(r.spouses || []), ...(r.children || [])].filter(r_id => !!r_id);
+            const r_ids = [...r.parents, ...(r.spouses || []), ...(r.children || [])].filter(r_id => !!r_id);
             r_ids.forEach(r_id => {
                 if (rels_checked.includes(r_id))
                     return;
@@ -1660,10 +1683,7 @@
                     if (!d.rels.hasOwnProperty(k))
                         continue;
                     const key = k;
-                    if (d.rels[key] === datum.id) {
-                        delete d.rels[key];
-                    }
-                    else if (Array.isArray(d.rels[key]) && d.rels[key].includes(datum.id)) {
+                    if (Array.isArray(d.rels[key]) && d.rels[key].includes(datum.id)) {
                         d.rels[key].splice(d.rels[key].findIndex(did => did === datum.id), 1);
                     }
                 }
@@ -1940,43 +1960,33 @@
     <form id="familyForm" class="f3-form">
       ${closeBtn()}
       <h3 class="f3-form-title">${form_creator.title}</h3>
-      ${genderRadio(form_creator)}
+      ${genderInfoField(form_creator)}
 
       ${fields(form_creator)}
-      
-      <div class="f3-form-buttons">
-        <button type="button" class="f3-cancel-btn">Cancel</button>
-        <button type="submit">Submit</button>
-      </div>
 
       ${form_creator.linkExistingRelative ? addLinkExistingRelative(form_creator) : ''}
     </form>
   `);
     }
     function getHtmlEdit(form_creator) {
+        const readOnlyFormCreator = Object.assign(Object.assign({}, form_creator), { force_info_only: true });
         return (` 
-    <form id="familyForm" class="f3-form ${form_creator.editable ? '' : 'non-editable'}">
+     <form id="familyForm" class="f3-form ${form_creator.editable ? '' : 'non-editable'}">
       ${closeBtn()}
       <div style="text-align: right; display: 'block'">
         ${!form_creator.no_edit ? addRelativeBtn(form_creator) : ''}
         ${form_creator.no_edit ? spaceDiv() : editBtn(form_creator)}
       </div>
 
-      ${genderRadio(form_creator)}
+      ${genderInfoField(readOnlyFormCreator)}
 
-      ${fields(form_creator)}
-      
-      <div class="f3-form-buttons">
-        <button type="button" class="f3-cancel-btn">Cancel</button>
-        <button type="submit">Submit</button>
-      </div>
+      ${fields(readOnlyFormCreator)}
 
       ${form_creator.linkExistingRelative ? addLinkExistingRelative(form_creator) : ''}
 
       <hr>
       ${deleteBtn(form_creator)}
 
-      ${removeRelativeBtn(form_creator)}
     </form>
   `);
     }
@@ -1985,15 +1995,6 @@
     <div>
       <button type="button" class="f3-delete-btn" ${form_creator.can_delete ? '' : 'disabled'}>
         Delete
-      </button>
-    </div>
-  `);
-    }
-    function removeRelativeBtn(form_creator) {
-        return (`
-    <div>
-      <button type="button" class="f3-remove-relative-btn${form_creator.removeRelativeActive ? ' active' : ''}">
-        ${form_creator.removeRelativeActive ? 'Cancel Remove Relation' : 'Remove Relation'}
       </button>
     </div>
   `);
@@ -2012,26 +2013,30 @@
     </span>
   `);
     }
-    function genderRadio(form_creator) {
-        if (!form_creator.editable)
+    function genderInfoField(form_creator) {
+        const g = form_creator.gender_field;
+        // Nếu không có cấu hình giới tính thì bỏ qua
+        if (!g || !Array.isArray(g.options))
             return '';
+        // Label hiển thị, nếu không có thì dùng "Giới tính"
+        const label = g.label || 'Giới tính';
+        // Tìm option đang được chọn theo initial_value
+        const selected = g.options.find(opt => opt.value === g.initial_value);
+        const text = selected ? selected.label : '';
+        // Nếu chưa có giá trị giới tính thì cũng có thể ẩn luôn dòng này
+        if (!text)
+            return '';
+        // Hiển thị giống các info-field khác
         return (`
-    <div class="f3-radio-group">
-      ${form_creator.gender_field.options.map(option => (`
-        <label>
-          <input type="radio" name="${form_creator.gender_field.id}" 
-            value="${option.value}" 
-            ${option.value === form_creator.gender_field.initial_value ? 'checked' : ''}
-            ${form_creator.gender_field.disabled ? 'disabled' : ''}
-          >
-          ${option.label}
-        </label>
-      `)).join('')}
+    <div class="f3-info-field">
+      <span class="f3-info-field-label">${label}</span>
+      <span class="f3-info-field-value">${text}</span>
     </div>
   `);
     }
     function fields(form_creator) {
-        if (!form_creator.editable)
+        const forceInfoOnly = form_creator.force_info_only === true;
+        if (!form_creator.editable || forceInfoOnly)
             return infoField();
         let fields_html = '';
         form_creator.fields.forEach(field => {
@@ -2223,7 +2228,7 @@
         function reload() {
             const formHtml = is_new ? getHtmlNew(form_creator) : getHtmlEdit(form_creator);
             formContainer.innerHTML = formHtml;
-            setupEventListenersBase(formContainer, form_creator, closeCallback, reload);
+            setupEventListenersBase(formContainer, form_creator, closeCallback);
             if (is_new)
                 setupEventListenersNew(formContainer, form_creator);
             else
@@ -2242,16 +2247,10 @@
     function setupEventListenersBase(formContainer, form_creator, closeCallback, reload) {
         const form = formContainer.querySelector('form');
         form.addEventListener('submit', form_creator.onSubmit);
-        const cancel_btn = form.querySelector('.f3-cancel-btn');
-        cancel_btn.addEventListener('click', onCancel);
+        // const cancel_btn = form.querySelector('.f3-cancel-btn')!;
+        // cancel_btn.addEventListener('click', onCancel)
         const close_btn = form.querySelector('.f3-close-btn');
         close_btn.addEventListener('click', closeCallback);
-        function onCancel() {
-            form_creator.editable = false;
-            if (form_creator.onCancel)
-                form_creator.onCancel();
-            reload();
-        }
     }
     function setupEventListenersNew(formContainer, form_creator) {
         const form = formContainer.querySelector('form');
@@ -2387,7 +2386,6 @@
         calculateTreeFit: calculateTreeFit,
         cardChangeMain: cardChangeMain,
         cardComponentSetup: cardComponentSetup,
-        cardShowHideRels: cardShowHideRels,
         cardToMiddle: cardToMiddle,
         checkIfConnectedToFirstPerson: checkIfConnectedToFirstPerson,
         checkIfRelativesConnectedWithoutPerson: checkIfRelativesConnectedWithoutPerson,
@@ -2469,48 +2467,6 @@
     </g>
   `) });
     }
-    function LinkBreakIcon({ x, y, rt, closed }) {
-        return ({ template: (`
-    <g style="
-          transform: translate(-12.2px, -.5px);
-          cursor: pointer;
-        " 
-        fill="currentColor" class="card_break_link${closed ? ' closed' : ''}"
-      >
-      <g style="transform: translate(${x}px,${y}px)scale(.02)rotate(${rt + 'deg'})">
-        <rect width="1000" height="700" y="150" style="opacity: 0" />
-        <g class="link_upper">
-          <g>
-            <path d="M616.3,426.4c19,4.5,38.1-7.4,42.6-26.4c4.4-19-7.4-38-26.5-42.5L522.5,332c-18,11.1-53.9,33.4-53.9,33.4l80.4,18.6c-7.8,4.9-19.5,12.1-31.3,19.4L616.3,426.4L616.3,426.4z"/>
-            <path d="M727.4,244.2c-50.2-11.6-100.3,3.3-135.7,35.4c28.6,22.6,64.5,30.2,116.4,51.3l141,32.6c23.9,5.6,56.6,47.2,51.1,71l-4.1,17c-5.6,23.7-47.3,56.4-71.2,51l-143.4-33.2c-66.8-8.6-104.1-16.6-132.9-7.5c17.4,44.9,55.9,80.8,106.5,92.4L800.9,588c81.3,18.8,162.3-31.5,181.2-112.4l4-17c18.8-81.1-31.7-161.8-112.9-180.6L727.4,244.2z"/>
-          </g>
-        </g>
-        <g class="link_lower">
-          <path d="M421.2,384.9l-128,127.6c-13.9,13.8-13.9,36.2,0,50s36.3,13.8,50.2,0.1l136.2-135.8v-36.7l-58.4,58.1V384.9L421.2,384.9z"/>
-          <path d="M204.6,742.8c-17.4,17.3-63.3,17.2-80.6,0.1l-12.3-12.3c-17.3-17.3,0.6-81.2,17.9-98.5l100.2-99.9c12.5-14.9,45.8-40.8,66.1-103.7c-47.7-9.4-98.9,4.2-135.8,40.9L54.2,575c-58.9,58.8-58.9,154,0,212.8L66.6,800c58.9,58.8,154.5,58.8,213.4,0l105.8-105.6c38.4-38.3,51.3-91.9,39.7-141c-44,22.7-89,62.3-116,84.8L204.6,742.8z"/>
-        </g>
-        <g class="link_particles">
-          <path d="M351.9,248.4l-26.5,63.4l80.6,30.1L351.9,248.4z"/>
-          <path d="M529.3,208l-43,26.6l35.4,52.3L529.3,208z"/>
-          <path d="M426.6,158.8l-44-2.9l61.7,134.6L426.6,158.8z"/>
-        </g>
-      </g>
-    </g>
-  `) });
-    }
-    function LinkBreakIconWrapper({ d, card_dim }) {
-        let g = "", r = d.data.rels, _r = d.data._rels || {}, closed = d.data.hide_rels, areParents = (r) => r.father || r.mother, areChildren = (r) => r.children && r.children.length > 0;
-        if ((d.is_ancestry || d.data.main) && (areParents(r) || areParents(_r))) {
-            g += LinkBreakIcon({ x: card_dim.w / 2, y: 0, rt: -45, closed }).template;
-        }
-        if (!d.is_ancestry && d.added) {
-            const sp = d.spouse, sp_r = sp.data.rels, _sp_r = sp.data._rels || {};
-            if ((areChildren(r) || areChildren(_r)) && (areChildren(sp_r) || areChildren(_sp_r))) {
-                g += LinkBreakIcon({ x: d.sx - d.x + card_dim.w / 2 + 24.4, y: (d.x !== d.sx ? card_dim.h / 2 : card_dim.h) + 1, rt: 135, closed }).template;
-            }
-        }
-        return { template: g };
-    }
     function CardImage({ d, image, card_dim, maleIcon, femaleIcon }) {
         return ({ template: (`
     <g style="transform: translate(${card_dim.img_x}px,${card_dim.img_y}px);" class="card_image" clip-path="url(#card_image_clip)">
@@ -2545,7 +2501,6 @@
 
     const CardElements = {
         miniTree,
-        lineBreak,
         cardBody,
         cardImage
     };
@@ -2563,14 +2518,6 @@
             else
                 cardChangeMain(props.store, { d });
         });
-        return g.node();
-    }
-    function lineBreak(d, props) {
-        if (d.data.to_add)
-            return;
-        const card_dim = props.card_dim;
-        const g = d3__namespace.create('svg:g').html(LinkBreakIconWrapper({ d, card_dim }).template);
-        g.on("click", (e) => { e.stopPropagation(); cardShowHideRels(props.store, { d }); });
         return g.node();
     }
     function cardBody(d, props) {
@@ -2939,8 +2886,6 @@
                     appendElement(CardElements.cardImage(d, props), this.querySelector('.card'));
                 if (props.mini_tree)
                     appendElement(CardElements.miniTree(d, props), this.querySelector('.card'), true);
-                if (props.link_break)
-                    appendElement(CardElements.lineBreak(d, props), this.querySelector('.card'));
             }
             if (props.onCardUpdate)
                 props.onCardUpdate.call(this, d);
@@ -3037,14 +2982,12 @@
             const datum = data_stash.find(d => d.id === d_id);
             const rels = datum.rels;
             if (kinship === 'self') {
-                loopCheck(rels.father, 'parent', depth - 1, d_id);
-                loopCheck(rels.mother, 'parent', depth - 1, d_id);
+                rels.parents.forEach(p_id => loopCheck(p_id, 'parent', depth - 1, d_id));
                 (rels.spouses || []).forEach(id => loopCheck(id, 'spouse', depth));
                 (rels.children || []).forEach(id => loopCheck(id, 'child', depth + 1));
             }
             else if (kinship === 'parent') {
-                loopCheck(rels.father, 'grandparent', depth - 1, d_id);
-                loopCheck(rels.mother, 'grandparent', depth - 1, d_id);
+                rels.parents.forEach(p_id => loopCheck(p_id, 'grandparent', depth - 1, d_id));
                 (rels.children || []).forEach(id => {
                     if (prev_rel_id && prev_rel_id === id)
                         return;
@@ -3061,8 +3004,7 @@
             else if (kinship === 'grandparent') {
                 if (!prev_rel_id)
                     console.error(`${kinship} should have prev_rel_id`);
-                loopCheck(rels.father, 'great-grandparent', depth - 1, d_id);
-                loopCheck(rels.mother, 'great-grandparent', depth - 1, d_id);
+                rels.parents.forEach(p_id => loopCheck(p_id, 'great-grandparent', depth - 1, d_id));
                 (rels.children || []).forEach(id => {
                     if (prev_rel_id && prev_rel_id === id)
                         return;
@@ -3075,8 +3017,7 @@
             else if (kinship.includes('great-grandparent')) {
                 if (!prev_rel_id)
                     console.error(`${kinship} should have prev_rel_id`);
-                loopCheck(rels.father, getGreatKinship(kinship, depth - 1), depth - 1, d_id);
-                loopCheck(rels.mother, getGreatKinship(kinship, depth - 1), depth - 1, d_id);
+                rels.parents.forEach(p_id => loopCheck(p_id, getGreatKinship(kinship, depth - 1), depth - 1, d_id));
                 (rels.children || []).forEach(id => {
                     if (prev_rel_id && prev_rel_id === id)
                         return;
@@ -3149,10 +3090,7 @@
                 const datum = data_stash.find(d => d.id === d_id);
                 if (kinship === 'spouse') {
                     const siblings = [];
-                    if (datum.rels.mother)
-                        (getD(datum.rels.mother).rels.children || []).forEach(d_id => siblings.push(d_id));
-                    if (datum.rels.father)
-                        (getD(datum.rels.father).rels.children || []).forEach(d_id => siblings.push(d_id));
+                    datum.rels.parents.forEach(p_id => (getD(p_id).rels.children || []).forEach(d_id => siblings.push(d_id)));
                     siblings.forEach(sibling_id => { if (!kinships[sibling_id])
                         kinships[sibling_id] = 'sibling-in-law'; }); // gender label is added in setupKinshipsGender
                 }
@@ -3241,10 +3179,7 @@
                 is_half_kin = checkIfHalfKin(parents, found_parent);
                 return;
             }
-            if (rels.father)
-                loopCheck(rels.father);
-            if (rels.mother)
-                loopCheck(rels.mother);
+            rels.parents.forEach(p_id => loopCheck(p_id));
         }
         function getAncestry(rel_id) {
             const ancestry = [];
@@ -3254,14 +3189,11 @@
                 const d = data_stash.find(d => d.id === rel_id);
                 const rels = d.rels;
                 ancestry.push(getParents(rels));
-                if (rels.father)
-                    loopAdd(rels.father);
-                if (rels.mother)
-                    loopAdd(rels.mother);
+                rels.parents.forEach(p_id => loopAdd(p_id));
             }
         }
         function getParents(rels) {
-            return [rels.father, rels.mother];
+            return rels.parents;
         }
         function checkIfRel(rel_id) {
             const d = data_stash.find(d => d.id === rel_id);
@@ -3279,7 +3211,7 @@
             }
         }
         function checkIfHalfKin(ancestors1, ancestors2) {
-            return ancestors1[0] !== ancestors2[0] || ancestors1[1] !== ancestors2[1];
+            return ancestors1.some((p, i) => p !== ancestors2[i]) || ancestors2.some((p, i) => p !== ancestors1[i]);
         }
     }
     function getOrdinal(n) {
@@ -3336,6 +3268,7 @@
                 data: JSON.parse(JSON.stringify(d.data.data)),
                 kinship: kinships[d.data.id],
                 rels: {
+                    parents: [],
                     spouses: [],
                     children: []
                 }
@@ -3372,14 +3305,12 @@
             function loopAdd(d_id) {
                 const d = data_stash.find(d => d.id === d_id);
                 const rels = d.rels;
-                if (same_ancestor_progeny.includes(rels.mother)) {
-                    ancestry.push(rels.mother);
-                    loopAdd(rels.mother);
-                }
-                if (same_ancestor_progeny.includes(rels.father)) {
-                    ancestry.push(rels.father);
-                    loopAdd(rels.father);
-                }
+                rels.parents.forEach(p_id => {
+                    if (same_ancestor_progeny.includes(p_id)) {
+                        ancestry.push(p_id);
+                        loopAdd(p_id);
+                    }
+                });
             }
         }
         function addRootSpouse(kinship_data_stash) {
@@ -3395,15 +3326,15 @@
                 kinship: kinships[spouse.id],
                 rels: {
                     spouses: [datum.id],
-                    children: datum.rels.children
+                    children: datum.rels.children,
+                    parents: []
                 }
             };
             kinship_data_stash.push(spouse_datum);
             (datum.rels.children || []).forEach(child_id => {
                 const child = data_stash.find(d => d.id === child_id);
                 const kinship_child = kinship_data_stash.find(d => d.id === child_id);
-                kinship_child.rels.father = child.rels.father;
-                kinship_child.rels.mother = child.rels.mother;
+                kinship_child.rels.parents = [...child.rels.parents];
             });
         }
         function addInLawConnection(kinship_data_stash) {
@@ -3425,7 +3356,8 @@
                 kinship: kinships[spouse.id],
                 rels: {
                     spouses: [datum.id],
-                    children: []
+                    children: [],
+                    parents: []
                 }
             };
             kinship_data_stash.push(spouse_datum);
@@ -3440,14 +3372,12 @@
                 kinship: kinships[in_law_id],
                 rels: {
                     spouses: [],
-                    children: []
+                    children: [],
+                    parents: []
                 }
             });
             const siblings = [];
-            if (in_law_datum.rels.mother)
-                (getD(in_law_datum.rels.mother).rels.children || []).forEach(d_id => siblings.push(d_id));
-            if (in_law_datum.rels.father)
-                (getD(in_law_datum.rels.father).rels.children || []).forEach(d_id => siblings.push(d_id));
+            in_law_datum.rels.parents.forEach(p_id => (getD(p_id).rels.children || []).forEach(d_id => siblings.push(d_id)));
             const spouse_id = (_a = getD(rel_id).rels.spouses) === null || _a === void 0 ? void 0 : _a.find(d_id => siblings.includes(d_id));
             datum.rels.spouses = [spouse_id];
             const spouse = getD(spouse_id);
@@ -3457,44 +3387,29 @@
                 kinship: kinships[spouse.id],
                 rels: {
                     spouses: [datum.id],
-                    children: []
+                    children: [],
+                    parents: []
                 }
             };
             kinship_data_stash.push(spouse_datum);
-            if (in_law_datum.rels.father) {
-                const father_id = in_law_datum.rels.father;
-                const father = getD(father_id);
-                const father_datum = {
-                    id: father.id,
-                    data: JSON.parse(JSON.stringify(father.data)),
-                    kinship: 'Father-in-law',
+            in_law_datum.rels.parents.forEach(p_id => {
+                const parent = getD(p_id);
+                const kinship_label = parent.data.gender === 'M' ? 'Father-in-law' : parent.data.gender === 'F' ? 'Mother-in-law' : 'Parent-in-law';
+                const parent_datum = {
+                    id: parent.id,
+                    data: JSON.parse(JSON.stringify(parent.data)),
+                    kinship: kinship_label,
                     rels: {
                         spouses: [],
-                        children: [spouse_id, in_law_id]
+                        children: [spouse_id, in_law_id],
+                        parents: []
                     }
                 };
-                if (in_law_datum.rels.mother) {
-                    father_datum.rels.spouses.push(in_law_datum.rels.mother);
-                }
-                kinship_data_stash.unshift(father_datum);
-            }
-            if (in_law_datum.rels.mother) {
-                const mother_id = in_law_datum.rels.mother;
-                const mother = getD(mother_id);
-                const mother_datum = {
-                    id: mother.id,
-                    data: JSON.parse(JSON.stringify(mother.data)),
-                    kinship: 'Mother-in-law',
-                    rels: {
-                        spouses: [],
-                        children: [spouse_id, in_law_id]
-                    }
-                };
-                if (in_law_datum.rels.father) {
-                    mother_datum.rels.spouses.push(in_law_datum.rels.father);
-                }
-                kinship_data_stash.unshift(mother_datum);
-            }
+                const p2_id = in_law_datum.rels.parents.find(p_id => p_id !== p_id);
+                if (p2_id)
+                    parent_datum.rels.parents.push(p2_id);
+                kinship_data_stash.unshift(parent_datum);
+            });
         }
         function getD(d_id) {
             return data_stash.find(d => d.id === d_id);
@@ -3504,10 +3419,9 @@
     function handleLinkRel(updated_datum, link_rel_id, store_data) {
         const new_rel_id = updated_datum.id;
         store_data.forEach(d => {
-            if (d.rels.father === new_rel_id)
-                d.rels.father = link_rel_id;
-            if (d.rels.mother === new_rel_id)
-                d.rels.mother = link_rel_id;
+            if (d.rels.parents.includes(new_rel_id)) {
+                d.rels.parents[d.rels.parents.indexOf(new_rel_id)] = link_rel_id;
+            }
             if (d.rels.spouses && d.rels.spouses.includes(new_rel_id)) {
                 d.rels.spouses = d.rels.spouses.filter(id => id !== new_rel_id);
                 if (!d.rels.spouses.includes(link_rel_id))
@@ -3537,14 +3451,31 @@
             if (!link_rel.rels.spouses.includes(spouse_id))
                 link_rel.rels.spouses.push(spouse_id);
         });
-        if (link_rel.rels.father && new_rel.rels.father)
-            console.error('link rel already has father');
-        if (link_rel.rels.mother && new_rel.rels.mother)
-            console.error('link rel already has mother');
-        if (new_rel.rels.father)
-            link_rel.rels.father = new_rel.rels.father;
-        if (new_rel.rels.mother)
-            link_rel.rels.mother = new_rel.rels.mother;
+        if (link_rel.rels.parents.length === 0) {
+            link_rel.rels.parents = [...new_rel.rels.parents];
+        }
+        else {
+            const link_rel_father = link_rel.rels.parents.find(id => { var _a; return ((_a = store_data.find(d => d.id === id)) === null || _a === void 0 ? void 0 : _a.data.gender) === "M"; });
+            const link_rel_mother = link_rel.rels.parents.find(id => { var _a; return ((_a = store_data.find(d => d.id === id)) === null || _a === void 0 ? void 0 : _a.data.gender) === "F"; });
+            const new_rel_father = new_rel.rels.parents.find(id => { var _a; return ((_a = store_data.find(d => d.id === id)) === null || _a === void 0 ? void 0 : _a.data.gender) === "M"; });
+            const new_rel_mother = new_rel.rels.parents.find(id => { var _a; return ((_a = store_data.find(d => d.id === id)) === null || _a === void 0 ? void 0 : _a.data.gender) === "F"; });
+            if (new_rel_father) {
+                if (link_rel_father) {
+                    console.error('link rel already has father');
+                    link_rel.rels.parents[link_rel.rels.parents.indexOf(link_rel_father)] = new_rel_father;
+                }
+                else
+                    link_rel.rels.parents.push(new_rel_father);
+            }
+            if (new_rel_mother) {
+                if (link_rel_mother) {
+                    console.error('link rel already has mother');
+                    link_rel.rels.parents[link_rel.rels.parents.indexOf(link_rel_mother)] = new_rel_mother;
+                }
+                else
+                    link_rel.rels.parents.push(new_rel_mother);
+            }
+        }
         store_data.splice(store_data.findIndex(d => d.id === new_rel_id), 1);
     }
     function getLinkRelOptions(datum, data) {
@@ -3565,8 +3496,7 @@
             loopCheck(datum);
             return ancestry_ids;
             function loopCheck(d) {
-                const parents = [d.rels.father, d.rels.mother];
-                parents.forEach(p_id => {
+                d.rels.parents.forEach(p_id => {
                     if (p_id) {
                         ancestry_ids.push(p_id);
                         const parent = data_stash.find(d => d.id === p_id);
@@ -3651,7 +3581,7 @@
                 type: 'switch',
                 label: 'Gender',
                 initial_value: datum.data.gender,
-                disabled: ['father', 'mother'].some(rel => { var _a; return rel === ((_a = datum._new_rel_data) === null || _a === void 0 ? void 0 : _a.rel_type); }) || childrenAdded(),
+                disabled: false,
                 options: [{ value: 'M', label: 'Male' }, { value: 'F', label: 'Female' }]
             };
         }
@@ -3708,9 +3638,6 @@
             };
             return obj;
         }
-        function childrenAdded() {
-            return (datum.rels.children || []).some(c_id => { const child = store.getDatum(c_id); return !child._new_rel_data; });
-        }
         function submitFormChanges(e) {
             if (onSubmit) {
                 onSubmit(e, datum, applyChanges, () => postSubmitHandler({}));
@@ -3748,9 +3675,6 @@
                 return;
             if (rd.rel_type === 'spouse')
                 d.data.gender = d.data.gender === 'M' ? 'F' : 'M';
-            if (['son', 'daughter'].includes(rd.rel_type)) {
-                [d.rels.father, d.rels.mother] = [d.rels.mother, d.rels.father];
-            }
         });
     }
     function cleanUp(data) {
@@ -3758,10 +3682,8 @@
             const d = data[i];
             if (d._new_rel_data) {
                 data.forEach(d2 => {
-                    if (d2.rels.father === d.id)
-                        delete d2.rels.father;
-                    if (d2.rels.mother === d.id)
-                        delete d2.rels.mother;
+                    if (d2.rels.parents.includes(d.id))
+                        d2.rels.parents.splice(d2.rels.parents.indexOf(d.id), 1);
                     if (d2.rels.children && d2.rels.children.includes(d.id))
                         d2.rels.children.splice(d2.rels.children.indexOf(d.id), 1);
                     if (d2.rels.spouses && d2.rels.spouses.includes(d.id))
@@ -3788,36 +3710,39 @@
         if (can_add.child)
             addChildren();
         function addParents() {
-            if (!datum.rels.father) {
+            const parents = datum.rels.parents;
+            const father = parents.find(d_id => { var _a; return ((_a = store_data.find(d => d.id === d_id)) === null || _a === void 0 ? void 0 : _a.data.gender) === "M"; });
+            const mother = parents.find(d_id => { var _a; return ((_a = store_data.find(d => d.id === d_id)) === null || _a === void 0 ? void 0 : _a.data.gender) === "F"; });
+            if (parents.length < 2 && !father) {
                 const father = createNewPerson({ data: { gender: "M" }, rels: { children: [datum.id] } });
                 father._new_rel_data = { rel_type: "father", label: addRelLabels.father, rel_id: datum.id };
-                datum.rels.father = father.id;
+                datum.rels.parents.push(father.id);
                 store_data.push(father);
             }
-            if (!datum.rels.mother) {
+            if (parents.length < 2 && !mother) {
                 const mother = createNewPerson({ data: { gender: "F" }, rels: { children: [datum.id] } });
                 mother._new_rel_data = { rel_type: "mother", label: addRelLabels.mother, rel_id: datum.id };
-                datum.rels.mother = mother.id;
+                datum.rels.parents.push(mother.id);
                 store_data.push(mother);
             }
-            const mother = store_data.find(d => d.id === datum.rels.mother);
-            const father = store_data.find(d => d.id === datum.rels.father);
-            if (!mother.rels.spouses)
-                mother.rels.spouses = [];
-            if (!father.rels.spouses)
-                father.rels.spouses = [];
-            if (!mother.rels.spouses.includes(father.id))
-                mother.rels.spouses.push(father.id);
-            if (!father.rels.spouses.includes(mother.id))
-                father.rels.spouses.push(mother.id);
-            if (!mother.rels.children)
-                mother.rels.children = [];
-            if (!father.rels.children)
-                father.rels.children = [];
-            if (!mother.rels.children.includes(datum.id))
-                mother.rels.children.push(datum.id);
-            if (!father.rels.children.includes(datum.id))
-                father.rels.children.push(datum.id);
+            const p1 = store_data.find(d => d.id === datum.rels.parents[0]);
+            const p2 = store_data.find(d => d.id === datum.rels.parents[1]);
+            if (!p1.rels.spouses)
+                p1.rels.spouses = [];
+            if (!p2.rels.spouses)
+                p2.rels.spouses = [];
+            if (!p1.rels.spouses.includes(p2.id))
+                p1.rels.spouses.push(p2.id);
+            if (!p2.rels.spouses.includes(p1.id))
+                p2.rels.spouses.push(p1.id);
+            if (!p1.rels.children)
+                p1.rels.children = [];
+            if (!p2.rels.children)
+                p2.rels.children = [];
+            if (!p1.rels.children.includes(datum.id))
+                p1.rels.children.push(datum.id);
+            if (!p2.rels.children.includes(datum.id))
+                p2.rels.children.push(datum.id);
         }
         function addSpouseForSingleParentChildren() {
             if (!datum.rels.spouses)
@@ -3826,22 +3751,15 @@
                 let new_spouse;
                 datum.rels.children.forEach(child_id => {
                     const child = store_data.find(d => d.id === child_id);
-                    if (!child.rels.mother) {
+                    if (child.rels.parents.length === 1) {
+                        const p1 = store_data.find(d => d.id === child.rels.parents[0]);
+                        const new_spouse_gender = p1.data.gender === "M" ? "F" : "M";
                         if (!new_spouse)
-                            new_spouse = createNewPerson({ data: { gender: "F" }, rels: { spouses: [datum.id], children: [] } });
+                            new_spouse = createNewPerson({ data: { gender: new_spouse_gender }, rels: { spouses: [datum.id] } });
                         new_spouse._new_rel_data = { rel_type: "spouse", label: addRelLabels.spouse, rel_id: datum.id };
                         new_spouse.rels.children.push(child.id);
                         datum.rels.spouses.push(new_spouse.id);
-                        child.rels.mother = new_spouse.id;
-                        store_data.push(new_spouse);
-                    }
-                    if (!child.rels.father) {
-                        if (!new_spouse)
-                            new_spouse = createNewPerson({ data: { gender: "M" }, rels: { spouses: [datum.id], children: [] } });
-                        new_spouse._new_rel_data = { rel_type: "spouse", label: addRelLabels.spouse, rel_id: datum.id };
-                        new_spouse.rels.children.push(child.id);
-                        datum.rels.spouses.push(new_spouse.id);
-                        child.rels.father = new_spouse.id;
+                        child.rels.parents.push(new_spouse.id);
                         store_data.push(new_spouse);
                     }
                 });
@@ -3863,16 +3781,14 @@
                 datum.rels.spouses = [];
             datum.rels.spouses.forEach(spouse_id => {
                 const spouse = store_data.find(d => d.id === spouse_id);
-                const mother_id = datum.data.gender === "M" ? spouse.id : datum.id;
-                const father_id = datum.data.gender === "F" ? spouse.id : datum.id;
                 if (!spouse.rels.children)
                     spouse.rels.children = [];
-                const new_son = createNewPerson({ data: { gender: "M" }, rels: { father: father_id, mother: mother_id } });
+                const new_son = createNewPerson({ data: { gender: "M" }, rels: { parents: [datum.id, spouse.id] } });
                 new_son._new_rel_data = { rel_type: "son", label: addRelLabels.son, other_parent_id: spouse.id, rel_id: datum.id };
                 spouse.rels.children.push(new_son.id);
                 datum.rels.children.push(new_son.id);
                 store_data.push(new_son);
-                const new_daughter = createNewPerson({ data: { gender: "F" }, rels: { mother: mother_id, father: father_id } });
+                const new_daughter = createNewPerson({ data: { gender: "F" }, rels: { parents: [datum.id, spouse.id] } });
                 new_daughter._new_rel_data = { rel_type: "daughter", label: addRelLabels.daughter, other_parent_id: spouse.id, rel_id: datum.id };
                 spouse.rels.children.push(new_daughter.id);
                 datum.rels.children.push(new_daughter.id);
@@ -3999,32 +3915,21 @@
             function onChange(rel_tree_datum, onAccept) {
                 const rel_type = findRelType(rel_tree_datum);
                 const rels = datum.rels;
-                if (rel_type === 'father')
-                    handleFatherRemoval.call(this);
-                else if (rel_type === 'mother')
-                    handleMotherRemoval.call(this);
+                if (rel_type === 'parent')
+                    handleParentRemoval.call(this);
                 else if (rel_type === 'spouse')
                     handleSpouseRemoval.call(this);
                 else if (rel_type === 'children')
                     handleChildrenRemoval.call(this);
-                function handleFatherRemoval() {
-                    const father = store.getDatum(rels.father);
-                    if (!father)
-                        throw new Error('Father not found');
-                    if (!father.rels.children)
-                        throw new Error('Father has no children');
-                    father.rels.children = father.rels.children.filter(id => id !== datum.id);
-                    rels.father = undefined;
-                    onAccept();
-                }
-                function handleMotherRemoval() {
-                    const mother = store.getDatum(rels.mother);
-                    if (!mother)
-                        throw new Error('Mother not found');
-                    if (!mother.rels.children)
-                        throw new Error('Mother has no children');
-                    mother.rels.children = mother.rels.children.filter(id => id !== datum.id);
-                    rels.mother = undefined;
+                function handleParentRemoval() {
+                    const rel_id = rel_tree_datum.data.id;
+                    const parent = store.getDatum(rel_id);
+                    if (!parent)
+                        throw new Error('Parent not found');
+                    if (!parent.rels.children)
+                        throw new Error('Parent has no children');
+                    parent.rels.children = parent.rels.children.filter(id => id !== datum.id);
+                    rels.parents = rels.parents.filter(id => id !== rel_id);
                     onAccept();
                 }
                 function handleSpouseRemoval() {
@@ -4039,9 +3944,7 @@
                             const child = store.getDatum(ch_id);
                             if (!child)
                                 throw new Error('Child not found');
-                            if (child.rels.father === spouse.id)
-                                return true;
-                            if (child.rels.mother === spouse.id)
+                            if (child.rels.parents.includes(spouse.id))
                                 return true;
                             return false;
                         });
@@ -4075,10 +3978,8 @@
                             const child = store.getDatum(id);
                             if (!child)
                                 throw new Error('Child not found');
-                            if (child.rels.father === other_parent.id)
-                                child.rels.father = undefined;
-                            if (child.rels.mother === other_parent.id)
-                                child.rels.mother = undefined;
+                            if (child.rels.parents.includes(other_parent.id))
+                                child.rels.parents = child.rels.parents.filter(id => id !== other_parent.id);
                         });
                         if (other_parent.rels.children) {
                             other_parent.rels.children = other_parent.rels.children.filter(ch_id => !(childrens_parent.rels.children || []).includes(ch_id));
@@ -4090,16 +3991,13 @@
                     if (!rels.children)
                         throw new Error('Children not found');
                     rels.children = rels.children.filter(id => id !== rel_tree_datum.data.id);
-                    const datum_rel_type = rel_tree_datum.data.rels.father === datum.id ? 'father' : 'mother';
-                    rel_tree_datum.data.rels[datum_rel_type] = undefined;
+                    rel_tree_datum.data.rels.parents = rel_tree_datum.data.rels.parents.filter(id => id !== datum.id);
                     onAccept();
                 }
                 function findRelType(d) {
                     if (d.is_ancestry) {
-                        if (datum.rels.father === d.data.id)
-                            return 'father';
-                        if (datum.rels.mother === d.data.id)
-                            return 'mother';
+                        if (datum.rels.parents.includes(d.data.id))
+                            return 'parent';
                     }
                     else if (d.spouse) {
                         if (!datum.rels.spouses)
@@ -4219,7 +4117,7 @@
      * const f3EditTree = f3Chart.editTree()  // returns an EditTree instance
      *   .setFields(["first name","last name","birthday"])
      *   .setOnChange(() => {
-     *      const updated_data = f3EditTree.getStoreDataCopy()
+     *      const updated_data = f3EditTree.exportData()
      *      // do something with the updated data
      *   })
      * ```
@@ -4327,7 +4225,7 @@
             }
         }
         createHistory() {
-            const history = createHistory(this.store, this.getStoreDataCopy.bind(this), historyUpdateTree.bind(this));
+            const history = createHistory(this.store, this._getStoreDataCopy.bind(this), historyUpdateTree.bind(this));
             const nav_cont = this.cont.querySelector('.f3-nav-cont');
             if (!nav_cont)
                 throw new Error("Nav cont not found");
@@ -4566,19 +4464,31 @@
             this.createFormNew = createFormNew;
             return this;
         }
-        /**
-         * Get data copy
-         * @returns The store data
-         */
-        getStoreDataCopy() {
+        _getStoreDataCopy() {
             let data = JSON.parse(JSON.stringify(this.store.getData())); // important to make a deep copy of the data
             if (this.addRelativeInstance.is_active)
                 data = this.addRelativeInstance.cleanUp(data);
             data = cleanupDataJson(data);
             return data;
         }
+        /**
+         * deprecated: use exportData instead. This function will be removed in a future version.
+         * Export the data
+         * @returns family chart data
+         */
+        getStoreDataCopy() {
+            return this.exportData();
+        }
+        /**
+         * @returns family chart data
+         */
+        exportData() {
+            let data = this._getStoreDataCopy();
+            data = formatDataForExport(data, this.store.state.legacy_format);
+            return data;
+        }
         getDataJson() {
-            return JSON.stringify(this.getStoreDataCopy(), null, 2);
+            return JSON.stringify(this.exportData(), null, 2);
         }
         updateHistory() {
             if (this.history) {
@@ -5804,6 +5714,7 @@
         kinshipInfo: kinshipInfo
     });
 
+    // export { default as calculateTree } from "./layout/calculate-tree"  // handled in deprecated section
     /** @deprecated Use cardSvg instead. This export will be removed in a future version. */
     const CardSvg = CardSvgWrapper;
     /** @deprecated Use cardHtml instead. This export will be removed in a future version. */
@@ -5818,13 +5729,15 @@
         CardHtmlClass: CardHtml$1,
         CardSvg: CardSvg,
         CardSvgClass: CardSvg$1,
-        calculateTree: calculateTree,
+        calculateTree: calculateTreeWithV1Data,
         cardHtml: CardHtmlWrapper,
         cardSvg: CardSvgWrapper,
         createChart: createChart,
         createStore: createStore,
         createSvg: createSvg,
         elements: elements,
+        formatData: formatData,
+        formatDataForExport: formatDataForExport,
         handlers: handlers,
         htmlHandlers: htmlHandlersWithDeprecated,
         icons: icons,
@@ -5837,7 +5750,7 @@
     exports.CardHtmlClass = CardHtml$1;
     exports.CardSvg = CardSvg;
     exports.CardSvgClass = CardSvg$1;
-    exports.calculateTree = calculateTree;
+    exports.calculateTree = calculateTreeWithV1Data;
     exports.cardHtml = CardHtmlWrapper;
     exports.cardSvg = CardSvgWrapper;
     exports.createChart = createChart;
@@ -5845,6 +5758,8 @@
     exports.createSvg = createSvg;
     exports.default = exports$1;
     exports.elements = elements;
+    exports.formatData = formatData;
+    exports.formatDataForExport = formatDataForExport;
     exports.handlers = handlers;
     exports.htmlHandlers = htmlHandlersWithDeprecated;
     exports.icons = icons;

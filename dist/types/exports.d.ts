@@ -1,5 +1,4 @@
 export type * from './types/index';
-export { default as calculateTree } from "./layout/calculate-tree";
 export { default as createStore } from "./store/store";
 export { default as view } from "./renderers/view";
 export { default as createSvg } from "./renderers/svg";
@@ -9,7 +8,9 @@ export * as icons from './renderers/icons';
 export { default as createChart } from './core/chart';
 export { default as cardSvg } from './core/cards/card-svg';
 export { default as cardHtml } from './core/cards/card-html';
+export { formatData, formatDataForExport } from "./store/format-data";
 export { CalculateTree } from "./layout/calculate-tree";
+export { calculateTreeWithV1Data as calculateTree } from "./layout/calculate-tree";
 export { Card } from './renderers/card-svg/card-svg';
 import cardSvg from './core/cards/card-svg';
 import cardHtml from './core/cards/card-html';

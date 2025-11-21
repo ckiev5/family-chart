@@ -3,6 +3,3 @@ import { TreeDatum } from "../../types/treeData";
 export declare function cardChangeMain(store: Store, { d }: {
     d: TreeDatum;
 }): boolean;
-export declare function cardShowHideRels(store: Store, { d }: {
-    d: TreeDatum;
-}): void;

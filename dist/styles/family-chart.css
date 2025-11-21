@@ -237,20 +237,22 @@
 }
 
 .f3-edit-btn {
-  position: relative;
+  /* position: relative;
   top: -1px;
   width: 24px;
   height: 24px;
   cursor: pointer;
-  display: inline-block;
+  display: inline-block; */
+  display: none !important;
 }
 
 .f3-add-relative-btn {
-  cursor: pointer;
+  /* cursor: pointer;
   width: 27px;
   height: 27px;
   margin-right: 5px;
-  display: inline-block;
+  display: inline-block; */
+  display: none !important;
 }
 
 /* card-html */

@@ -3,7 +3,6 @@ import { TreeDatum } from "../../types/treeData";
 import { CardDim } from "./templates";
 declare const CardElements: {
     miniTree: typeof miniTree;
-    lineBreak: typeof lineBreak;
     cardBody: typeof cardBody;
     cardImage: typeof cardImage;
 };
@@ -11,11 +10,6 @@ export default CardElements;
 declare function miniTree(d: TreeDatum, props: {
     card_dim: CardDim;
     onMiniTreeClick?: (e: MouseEvent, d: TreeDatum) => void;
-    store: Store;
-}): Element | null | undefined;
-declare function lineBreak(d: TreeDatum, props: {
-    card_dim: CardDim;
-    onLineBreakClick?: (e: MouseEvent, d: TreeDatum) => void;
     store: Store;
 }): Element | null | undefined;
 declare function cardBody(d: TreeDatum, props: {

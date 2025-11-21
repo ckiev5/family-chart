@@ -4,8 +4,6 @@ import { CalculateTreeOptions } from "./calculate-tree";
 export declare function sortChildrenWithSpouses(children: Datum[], datum: Datum, data: Data): Datum[] | undefined;
 export declare function sortAddNewChildren(children: Datum[]): Datum[];
 export declare function calculateEnterAndExitPositions(d: TreeDatum, entering: boolean, exiting: boolean): void;
-export declare function toggleRels(tree_datum: TreeDatum, hide_rels: boolean): void;
-export declare function toggleAllRels(tree_data: TreeDatum[], hide_rels: boolean): void;
 export declare function setupSiblings({ tree, data_stash, node_separation, sortChildrenFunction }: {
     tree: TreeDatum[];
     data_stash: Data;

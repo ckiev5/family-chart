@@ -2,7 +2,11 @@ import { Data, Datum } from "../types/data";
 type RelType = 'daughter' | 'son' | 'mother' | 'father' | 'spouse';
 export declare function createNewPerson({ data, rels }: {
     data: Datum['data'];
-    rels?: Datum['rels'];
+    rels?: {
+        parents?: string[];
+        spouses?: string[];
+        children?: string[];
+    };
 }): {
     id: string;
     data: {
@@ -10,10 +14,9 @@ export declare function createNewPerson({ data, rels }: {
         gender: "M" | "F";
     };
     rels: {
-        father?: string;
-        mother?: string;
-        spouses?: string[];
-        children?: string[];
+        parents: string[];
+        spouses: string[];
+        children: string[];
     };
 };
 export declare function createNewPersonWithGenderFromRel({ data, rel_type, rel_datum }: {
@@ -27,10 +30,9 @@ export declare function createNewPersonWithGenderFromRel({ data, rel_type, rel_d
         gender: "M" | "F";
     };
     rels: {
-        father?: string;
-        mother?: string;
-        spouses?: string[];
-        children?: string[];
+        parents: string[];
+        spouses: string[];
+        children: string[];
     };
 };
 export declare function addNewPerson({ data_stash, datum }: {

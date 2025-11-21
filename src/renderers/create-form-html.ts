@@ -7,7 +7,7 @@ export function getHtmlNew(form_creator: NewRelFormCreator) {
     <form id="familyForm" class="f3-form">
       ${closeBtn()}
       <h3 class="f3-form-title">${form_creator.title}</h3>
-      ${genderRadio(form_creator)}
+      ${genderInfoField(form_creator)}
 
       ${fields(form_creator)}
 
@@ -29,7 +29,7 @@ export function getHtmlEdit(form_creator: EditDatumFormCreator) {
         ${form_creator.no_edit ? spaceDiv() : editBtn(form_creator)}
       </div>
 
-      ${genderRadio(readOnlyFormCreator)}
+      ${genderInfoField(readOnlyFormCreator)}
 
       ${fields(readOnlyFormCreator)}
 
@@ -38,7 +38,6 @@ export function getHtmlEdit(form_creator: EditDatumFormCreator) {
       <hr>
       ${deleteBtn(form_creator)}
 
-      ${removeRelativeBtn(form_creator)}
     </form>
   `)
 }
@@ -96,6 +95,32 @@ function genderRadio(form_creator: EditDatumFormCreator | NewRelFormCreator) {
     </div>
   `)
 }
+
+function genderInfoField(form_creator: EditDatumFormCreator | NewRelFormCreator) {
+  const g = form_creator.gender_field;
+
+  // Nếu không có cấu hình giới tính thì bỏ qua
+  if (!g || !Array.isArray(g.options)) return '';
+
+  // Label hiển thị, nếu không có thì dùng "Giới tính"
+  const label = (g as any).label || 'Giới tính';
+
+  // Tìm option đang được chọn theo initial_value
+  const selected = g.options.find(opt => opt.value === g.initial_value);
+  const text = selected ? selected.label : '';
+
+  // Nếu chưa có giá trị giới tính thì cũng có thể ẩn luôn dòng này
+  if (!text) return '';
+
+  // Hiển thị giống các info-field khác
+  return (`
+    <div class="f3-info-field">
+      <span class="f3-info-field-label">${label}</span>
+      <span class="f3-info-field-value">${text}</span>
+    </div>
+  `);
+}
+
 
 function fields(form_creator: EditDatumFormCreator | NewRelFormCreator) {
   const forceInfoOnly = (form_creator as any).force_info_only === true;

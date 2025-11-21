@@ -1,6 +1,6 @@
-
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
@@ -8,116 +8,199 @@
   <link rel="shortcut icon" type="image/svg" href="/examples/logo.svg">
   <script src="https://unpkg.com/d3@7"></script>
   <link rel="stylesheet" href="/src/styles/family-chart.css">
-  <style> body { font-family: 'Arial', sans-serif; } </style>
-</head>
-<body>
-<div id="FamilyChart" class="f3" style="width:100%;height:900px;margin:auto;background-color:rgb(33,33,33);color:#fff;"></div>
-<script type="module">
-import f3 from '../../../src/index.js'
-
-// list of all example. delete this if not needed
-import sidebar from '../../sidebar.js'
-sidebar()
-
-fetch('../../data/data.json')
-  .then(res => res.json())
-  .then(data => create(data))
-  .catch(err => console.error(err))
-
-function create(data) {
-  const f3Chart = f3.createChart('#FamilyChart', data)
-    .setTransitionTime(1000)
-    .setCardXSpacing(250)
-    .setCardYSpacing(150)
-
-  const f3Card = f3Chart.setCardHtml()
-    .setOnCardUpdate(function(d) {
-      if (d.data._new_rel_data) return
-      if (f3EditTree.isRemovingRelative()) return
-
-      d3.select(this).select('.card').style('cursor', 'default')
-      const card = this.querySelector('.card-inner')
-      d3.select(card)
-      .append('div')
-      .attr('class', 'f3-svg-circle-hover')
-      .attr('style', 'cursor: pointer; width: 20px; height: 20px;position: absolute; top: 0; right: 0;')
-      .html(f3.icons.userEditSvgIcon())
-      .select('svg')
-      .style('padding', '0')
-      .on('click', (e) => {
-        e.stopPropagation()
-        f3EditTree.open(d.data)
-        if (f3EditTree.isAddingRelative()) return
-        if (f3EditTree.isRemovingRelative()) return
-        f3Card.onCardClickDefault(e, d)
-      })
-      d3.select(card)
-      .append('div')
-      .attr('class', 'f3-svg-circle-hover')
-      .attr('style', 'cursor: pointer; width: 20px; height: 20px;position: absolute; top: 0; right: 23px;')
-      .html(f3.icons.userPlusSvgIcon())
-      .select('svg')
-      .style('padding', '0')
-      .on('click', (e) => {
-        e.stopPropagation()
-        if (f3EditTree.isAddingRelative()) {
-          if (f3Chart.store.getMainDatum().id === d.data.id) {
-            f3EditTree.addRelativeInstance.onCancel()
-          } else {
-            f3EditTree.addRelativeInstance.onCancel()
-            f3EditTree.open(d.data)
-            f3Card.onCardClickDefault(e, d)
-            document.querySelector('.f3-add-relative-btn').click()
-          }
-        } else {
-          f3EditTree.open(d.data)
-          f3Card.onCardClickDefault(e, d)
-          document.querySelector('.f3-add-relative-btn').click()
-        }
-      })
-    })
-
-  f3Card.setOnCardClick((e, d) => {
-    if (f3EditTree.isAddingRelative()) {
-      if (d.data._new_rel_data) {
-        f3EditTree.open(d.data)
-      } else {
-        f3EditTree.addRelativeInstance.onCancel()
-        f3EditTree.closeForm()
-        f3Card.onCardClickDefault(e, d)
-      }
-    } else if (f3EditTree.isRemovingRelative()) {
-      f3EditTree.open(d.data)
-    } else {
-      if (f3Chart.getMainDatum().id === d.data.id) {
-        f3EditTree.open(d.data)
-        f3Card.onCardClickDefault(e, d)
-      } else {
-        f3EditTree.closeForm()
-        f3Card.onCardClickDefault(e, d)
-      }
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
     }
-  })
+  </style>
+</head>
 
-  const f3EditTree = f3Chart.editTree()
-    .fixed(true)
-    .setFields(["first name","last name","birthday","avatar"])
-    .setEditFirst(true)
-  
-  f3EditTree.setEdit()
-  
-  f3Chart.updateTree({initial: true})
+<body>
+  <div id="FamilyChart" class="f3"
+    style="width:100%;height:900px;margin:auto;background-color:rgb(33,33,33);color:#fff;"></div>
+  <script type="module">
+    import f3 from '../../../src/index.js'
+
+    // list of all example. delete this if not needed
+    import sidebar from '../../sidebar.js'
+    sidebar()
+
+    fetch('../../data/data.json')
+      .then(res => res.json())
+      .then(data => create(data))
+      .catch(err => console.error(err))
+
+    function onCardClickHighlightOnly(e, treeDatum, f3Chart, f3EditTree) {
+      // Không cho sự kiện lan lên DOM khác
+      if (e) e.stopPropagation();
+
+      // Lưu id node đang chọn
+      selectedId = treeDatum.data.id;
+
+      // Mở form edit cho node này
+      f3EditTree.open(treeDatum.data);
+
+      // Render lại cây để áp dụng highlight
+      f3Chart.updateTree({});
+    }
+
+    // Tìm người Nam ở "trên cùng" của cây:
+// - gender = M / NAM
+// - không có father, không có mother
+function findTopMostMale(data) {
+  if (!Array.isArray(data) || data.length === 0) return null;
+
+  const maleRoots = data.filter(d => {
+    const gender = (d.data?.gender || '').toUpperCase();
+    const rels = d.rels || {};
+    const hasParent = !!rels.parents && String(rels.parents).trim() !== '';
+
+    const isRoot = !hasParent ;
+    const isMale = gender === 'M' || gender === 'NAM';
+
+    return isRoot && isMale;
+  });
+
+  if (maleRoots.length > 0) return maleRoots[0];
+
+  // fallback: không có ông tổ Nam "root" → lấy bất kỳ Nam nào cũng được
+  const anyMale = data.find(d => {
+    const g = (d.data?.gender || '').toUpperCase();
+    return g === 'M' || g === 'NAM';
+  });
+
+  return anyMale || null;
 }
 
-</script>
-<style>
-  .f3 .f3-svg-circle-hover circle {
-    transition: fill 0.2s ease-in-out;
-  }
 
-  .f3 .f3-svg-circle-hover:hover circle {
-    fill: rgba(0, 0, 0, 0.2) !important;
-  }
-</style>
+
+    let selectedId = null;
+
+    function create(data) {
+      const f3Chart = f3.createChart('#FamilyChart', data)
+        .setTransitionTime(1000)
+        .setCardXSpacing(250)
+        .setCardYSpacing(150)
+
+      const f3EditTree = f3Chart.editTree()
+        .fixed(true)
+        .setFields(["first name", "last name", "birthday", "avatar"])
+        .setEditFirst(true)
+
+      f3EditTree.setEdit()
+
+         // 👉 Override cách xử lý khi CANCEL Add Relative
+  const addRel = f3EditTree.addRelativeInstance;
+
+  // (optional) nếu sau này muốn dùng lại behavior cũ:
+  // const originalCancelCallback = addRel.cancelCallback;
+
+  addRel.cancelCallback = (datum) => {
+    // Lấy data hiện tại trong store (đã cleanUp sau khi onCancel gọi cleanUp)
+    const dataNow = f3EditTree.store.getData();
+
+    // Tìm ông tổ Nam cao nhất
+    const topMale = findTopMostMale(dataNow);
+    const mainId = topMale ? topMale.id : datum.id;
+    console.log('Cancel Add Relative, mainId set to:', mainId);
+    // Set main node = ông tổ Nam & vẽ lại cây
+    f3Chart.updateMainId(mainId);
+    f3Chart.updateTree({});
+
+    // Nếu bạn muốn sau khi cancel vẫn mở form của ông tổ:
+    // f3EditTree.openFormWithId(mainId);
+
+    // Nếu muốn đóng form luôn thì có thể:
+    // f3EditTree.closeForm();
+  };
+
+      const f3Card = f3Chart.setCardHtml()
+        .setOnCardUpdate(function (d) {
+          if (d.data._new_rel_data) return
+          if (f3EditTree.isRemovingRelative()) return
+
+          // --- HIGHLIGHT: gắn class nếu là node đang chọn ---
+          const cardRoot = this.querySelector('.card');
+          if (cardRoot) {
+            if (d.data.id === selectedId) {
+              cardRoot.classList.add('card-main');
+            } else {
+              cardRoot.classList.remove('card-main');
+            }
+          }
+          // ---------------------------------------------------
+
+          d3.select(this).select('.card').style('cursor', 'default')
+          const card = this.querySelector('.card-inner')
+          d3.select(card)
+            .append('div')
+            .attr('class', 'f3-svg-circle-hover')
+            .attr('style', 'cursor: pointer; width: 20px; height: 20px;position: absolute; top: 0; right: 0;')
+            .html(f3.icons.userEditSvgIcon())
+            .select('svg')
+            .style('padding', '0')
+            .on('click', (e) => {
+              onCardClickHighlightOnly(e, d, f3Chart, f3EditTree);
+            })
+          d3.select(card)
+            .append('div')
+            .attr('class', '.f3-add-relative-btn')
+            .attr('style', 'cursor: pointer; width: 20px; height: 20px;position: absolute; top: 0; right: 23px;')
+            .html(f3.icons.userPlusSvgIcon())
+            .select('svg')
+            .style('padding', '0')
+            .on('click', (e) => {
+              e.stopPropagation()
+              if (f3EditTree.isAddingRelative()) {
+                if (f3Chart.store.getMainDatum().id === d.data.id) {
+                  f3EditTree.addRelativeInstance.onCancel()
+                } else {
+                  f3EditTree.addRelativeInstance.onCancel()
+                  f3EditTree.open(d.data)
+                  f3Card.onCardClickDefault(e, d)
+                  document.querySelector('.f3-add-relative-btn').click()
+                }
+              } else {
+                f3EditTree.open(d.data)
+                f3Card.onCardClickDefault(e, d)
+                document.querySelector('.f3-add-relative-btn').click()
+              }
+            })
+        })
+
+
+      f3Card.setOnCardClick((e, d) => {
+        if (f3EditTree.isAddingRelative()) {
+          // nếu click vào node tạm new_rel
+          if (d.data._new_rel_data) {
+            f3EditTree.open(d.data);
+          } else {
+            // tuỳ bạn, có thể vẫn dùng default để đổi main
+            // hoặc chỉ highlight:
+            onCardClickHighlightOnly(e, d, f3Chart, f3EditTree);
+          }
+        } else if (f3EditTree.isRemovingRelative()) {
+          f3EditTree.open(d.data);
+        } else {
+          // chế độ thường: chỉ highlight + mở form
+          onCardClickHighlightOnly(e, d, f3Chart, f3EditTree);
+        }
+      }
+      );
+
+      f3Chart.updateTree({ initial: true })
+    }
+
+  </script>
+  <style>
+    .f3 .f3-svg-circle-hover circle {
+      transition: fill 0.2s ease-in-out;
+    }
+
+    .f3 .f3-svg-circle-hover:hover circle {
+      fill: rgba(0, 0, 0, 0.2) !important;
+    }
+  </style>
 </body>
+
 </html>

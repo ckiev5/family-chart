@@ -25,7 +25,7 @@
     import sidebar from '../../sidebar.js'
     sidebar()
 
-    fetch('../../data/data.json')
+    fetch('../../data/data-test.json')
       .then(res => res.json())
       .then(data => create(data))
       .catch(err => console.error(err))
@@ -45,32 +45,32 @@
     }
 
     // Tìm người Nam ở "trên cùng" của cây:
-// - gender = M / NAM
-// - không có father, không có mother
-function findTopMostMale(data) {
-  if (!Array.isArray(data) || data.length === 0) return null;
+    // - gender = M / NAM
+    // - không có father, không có mother
+    function findTopMostMale(data) {
+      if (!Array.isArray(data) || data.length === 0) return null;
 
-  const maleRoots = data.filter(d => {
-    const gender = (d.data?.gender || '').toUpperCase();
-    const rels = d.rels || {};
-    const hasParent = !!rels.parents && String(rels.parents).trim() !== '';
+      const maleRoots = data.filter(d => {
+        const gender = (d.data?.gender || '').toUpperCase();
+        const rels = d.rels || {};
+        const hasParent = !!rels.parents && String(rels.parents).trim() !== '';
 
-    const isRoot = !hasParent ;
-    const isMale = gender === 'M' || gender === 'NAM';
+        const isRoot = !hasParent;
+        const isMale = gender === 'M' || gender === 'NAM';
 
-    return isRoot && isMale;
-  });
+        return isRoot && isMale;
+      });
 
-  if (maleRoots.length > 0) return maleRoots[0];
+      if (maleRoots.length > 0) return maleRoots[0];
 
-  // fallback: không có ông tổ Nam "root" → lấy bất kỳ Nam nào cũng được
-  const anyMale = data.find(d => {
-    const g = (d.data?.gender || '').toUpperCase();
-    return g === 'M' || g === 'NAM';
-  });
+      // fallback: không có ông tổ Nam "root" → lấy bất kỳ Nam nào cũng được
+      const anyMale = data.find(d => {
+        const g = (d.data?.gender || '').toUpperCase();
+        return g === 'M' || g === 'NAM';
+      });
 
-  return anyMale || null;
-}
+      return anyMale || null;
+    }
 
 
 
@@ -84,35 +84,73 @@ function findTopMostMale(data) {
 
       const f3EditTree = f3Chart.editTree()
         .fixed(true)
-        .setFields(["first name", "last name", "birthday", "avatar"])
+        .setFields([
+          { type: "text", label: "Tên", id: "first name" },
+          { type: "text", label: "Họ", id: "last name" },
+          { type: "text", label: "Giới tính", id: "gender" },
+          { type: "text", label: "Ngày sinh", id: "birthday" },
+          { type: "text", label: "Ngày mất", id: "date_of_death" },
+        ])
         .setEditFirst(true)
+        .setLinkExistingRelConfig({
+          title: "Thêm người từ danh sách có sẵn",
+          select_placeholder: "Chọn một người...",
+          // d ở đây là datum trong store của family-chart (có d.data, d.rels ...)
+          linkRelLabel: (d) => {
+            const data = d.data || {};
+            const first = data["first name"] || "";
+            const last = data["last name"] || "";
+            const birth = data["birthday"] ? ` (${data["birthday"]})` : "";
+
+            // map gender sang Nhãn VN cho dễ đọc
+            const g = (data.gender || "").toString().toUpperCase();
+            const genderLabel =
+              g === "M" || g === "NAM"
+                ? "Nam"
+                : g === "F" || g === "NU" || g === "NỮ"
+                  ? "Nữ"
+                  : "";
+
+            // mô tả quan hệ (optional)
+            const rels = d.rels || {};
+            const relTags = [];
+            if (rels.parents && rels.parents.length) relTags.push("con");
+            if (rels.children && rels.children.length) relTags.push("cha/mẹ");
+            if (rels.spouses && rels.spouses.length) relTags.push("vợ/chồng");
+            const relStr = relTags.length ? ` – ${relTags.join("/")}` : "";
+
+            const genderStr = genderLabel ? `, ${genderLabel}` : "";
+            return `${last} ${first}${birth}${genderStr}${relStr}`.trim();
+          },
+        });
 
       f3EditTree.setEdit()
+      
+        
+      // 👉 Override cách xử lý khi CANCEL Add Relative
+      const addRel = f3EditTree.addRelativeInstance;
 
-         // 👉 Override cách xử lý khi CANCEL Add Relative
-  const addRel = f3EditTree.addRelativeInstance;
+      // (optional) nếu sau này muốn dùng lại behavior cũ:
+      // const originalCancelCallback = addRel.cancelCallback;
 
-  // (optional) nếu sau này muốn dùng lại behavior cũ:
-  // const originalCancelCallback = addRel.cancelCallback;
+      addRel.cancelCallback = (datum) => {
+        // Lấy data hiện tại trong store (đã cleanUp sau khi onCancel gọi cleanUp)
+        const dataNow = f3EditTree.store.getData();
 
-  addRel.cancelCallback = (datum) => {
-    // Lấy data hiện tại trong store (đã cleanUp sau khi onCancel gọi cleanUp)
-    const dataNow = f3EditTree.store.getData();
+        // Tìm ông tổ Nam cao nhất
+        const topMale = findTopMostMale(dataNow);
+        const mainId = topMale ? topMale.id : datum.id;
+        console.log('Cancel Add Relative, mainId set to:', mainId);
+        // Set main node = ông tổ Nam & vẽ lại cây
+        f3Chart.updateMainId(mainId);
+        f3Chart.updateTree({});
 
-    // Tìm ông tổ Nam cao nhất
-    const topMale = findTopMostMale(dataNow);
-    const mainId = topMale ? topMale.id : datum.id;
-    console.log('Cancel Add Relative, mainId set to:', mainId);
-    // Set main node = ông tổ Nam & vẽ lại cây
-    f3Chart.updateMainId(mainId);
-    f3Chart.updateTree({});
+        // Nếu bạn muốn sau khi cancel vẫn mở form của ông tổ:
+        // f3EditTree.openFormWithId(mainId);
 
-    // Nếu bạn muốn sau khi cancel vẫn mở form của ông tổ:
-    // f3EditTree.openFormWithId(mainId);
-
-    // Nếu muốn đóng form luôn thì có thể:
-    // f3EditTree.closeForm();
-  };
+        // Nếu muốn đóng form luôn thì có thể:
+        // f3EditTree.closeForm();
+      };
 
       const f3Card = f3Chart.setCardHtml()
         .setOnCardUpdate(function (d) {
@@ -132,21 +170,19 @@ function findTopMostMale(data) {
 
           d3.select(this).select('.card').style('cursor', 'default')
           const card = this.querySelector('.card-inner')
-          d3.select(card)
-            .append('div')
-            .attr('class', 'f3-svg-circle-hover')
-            .attr('style', 'cursor: pointer; width: 20px; height: 20px;position: absolute; top: 0; right: 0;')
-            .html(f3.icons.userEditSvgIcon())
-            .select('svg')
-            .style('padding', '0')
-            .on('click', (e) => {
-              onCardClickHighlightOnly(e, d, f3Chart, f3EditTree);
-            })
+
+
+
+          const isAdding = f3EditTree.isAddingRelative();
+          const addIconHtml = isAdding
+            ? f3.icons.userPlusCloseSvgIcon()
+            : f3.icons.userPlusSvgIcon();
+
           d3.select(card)
             .append('div')
             .attr('class', '.f3-add-relative-btn')
-            .attr('style', 'cursor: pointer; width: 20px; height: 20px;position: absolute; top: 0; right: 23px;')
-            .html(f3.icons.userPlusSvgIcon())
+            .attr('style', 'cursor: pointer; width: 20px; height: 20px;position: absolute; top: 0; right: 2px;')
+            .html(addIconHtml)
             .select('svg')
             .style('padding', '0')
             .on('click', (e) => {

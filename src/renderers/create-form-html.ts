@@ -7,7 +7,6 @@ export function getHtmlNew(form_creator: NewRelFormCreator) {
     <form id="familyForm" class="f3-form">
       ${closeBtn()}
       <h3 class="f3-form-title">${form_creator.title}</h3>
-      ${genderInfoField(form_creator)}
 
       ${fields(form_creator)}
 
@@ -28,8 +27,6 @@ export function getHtmlEdit(form_creator: EditDatumFormCreator) {
         ${!form_creator.no_edit ? addRelativeBtn(form_creator) : ''}
         ${form_creator.no_edit ? spaceDiv() : editBtn(form_creator)}
       </div>
-
-      ${genderInfoField(readOnlyFormCreator)}
 
       ${fields(readOnlyFormCreator)}
 
@@ -128,12 +125,19 @@ function fields(form_creator: EditDatumFormCreator | NewRelFormCreator) {
   let fields_html = ''
   form_creator.fields.forEach(field => {
     if (field.type === 'text') {
+      // Nếu là field "gender" → hiển thị text giới tính nhưng vẫn là input text
+      const isGender = field.id === 'gender';
+      const rawValue = field.initial_value || '';
+      const displayValue = isGender
+        ? normalizeGender(rawValue)
+        : rawValue;
+      
       fields_html += `
       <div class="f3-form-field">
         <label>${field.label}</label>
         <input type="${field.type}" 
           name="${field.id}" 
-          value="${field.initial_value || ''}"
+          value="${displayValue}"
           placeholder="${field.label}">
       </div>`
     } else if (field.type === 'textarea') {
@@ -185,15 +189,29 @@ function fields(form_creator: EditDatumFormCreator | NewRelFormCreator) {
           <span class="f3-info-field-value">${select_field.options.find(option => option.value === select_field.initial_value)?.label || ''}</span>
         </div>`
       } else {
+        // Các field text (kể cả gender)
+        const isGender = field.id === 'gender';
+        const rawValue = field.initial_value || '';
+        const displayValue = isGender
+          ? normalizeGender(rawValue)
+          : rawValue;
+
         fields_html += `
         <div class="f3-info-field">
           <span class="f3-info-field-label">${field.label}</span>
-          <span class="f3-info-field-value">${field.initial_value || ''}</span>
-        </div>`
+          <span class="f3-info-field-value">${displayValue}</span>
+        </div>`;
       }
-    })
+    });
     return fields_html
   }
+}
+
+function normalizeGender(value: string): string {
+  const v = value.trim().toUpperCase();
+  if (v === 'M' || v === 'NAM') return 'Nam';
+  if (v === 'F' || v === 'NU' || v === 'NỮ') return 'Nữ';
+  return value; // nếu là text khác thì giữ nguyên
 }
 
 function addLinkExistingRelative(form_creator: EditDatumFormCreator | NewRelFormCreator) {
@@ -231,8 +249,8 @@ function addLinkExistingRelative(form_creator: EditDatumFormCreator | NewRelForm
         <select class="f3-link-existing-select" size="10">
           <option value="">${select_placeholder}</option>
           ${options
-            .map(option => `<option value="${option.value}">${option.label}</option>`)
-            .join('')}
+      .map(option => `<option value="${option.value}">${option.label}</option>`)
+      .join('')}
         </select>
       </div>
     </div>
@@ -281,9 +299,9 @@ function renderLinkExistingOptions(
 
   const filtered = normalized
     ? options.filter(opt =>
-        opt.label.toLowerCase().includes(normalized) ||
-        opt.value.toLowerCase().includes(normalized),
-      )
+      opt.label.toLowerCase().includes(normalized) ||
+      opt.value.toLowerCase().includes(normalized),
+    )
     : options;
 
   // Xóa hết option cũ

@@ -229,7 +229,7 @@
 
 .f3-close-btn {
   cursor: pointer;
-  position: absolute;
+  position: static;
   left: 10px;
   top: 8px;
   font-size: 30px;

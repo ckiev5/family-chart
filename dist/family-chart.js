@@ -1956,73 +1956,96 @@
     });
 
     function getHtmlNew(form_creator) {
-        return (` 
+        return ` 
     <form id="familyForm" class="f3-form">
       ${closeBtn()}
       <h3 class="f3-form-title">${form_creator.title}</h3>
 
 
 
-      ${form_creator.linkExistingRelative ? addLinkExistingRelative(form_creator) : ''}
+      ${form_creator.linkExistingRelative
+        ? addLinkExistingRelative(form_creator)
+        : ""}
     </form>
-  `);
+  `;
     }
     function getHtmlEdit(form_creator) {
         const readOnlyFormCreator = Object.assign(Object.assign({}, form_creator), { force_info_only: true });
-        return (` 
-     <form id="familyForm" class="f3-form ${form_creator.editable ? '' : 'non-editable'}">
+        return ` 
+     <form id="familyForm" class="f3-form ${form_creator.editable ? "" : "non-editable"}">
       ${closeBtn()}
       <div style="text-align: right; display: 'block'">
-        ${!form_creator.no_edit ? addRelativeBtn(form_creator) : ''}
+        ${!form_creator.no_edit ? addRelativeBtn(form_creator) : ""}
         ${form_creator.no_edit ? spaceDiv() : editBtn(form_creator)}
       </div>
 
       ${fields(readOnlyFormCreator)}
 
-      ${form_creator.linkExistingRelative ? addLinkExistingRelative(form_creator) : ''}
+      ${form_creator.linkExistingRelative
+        ? addLinkExistingRelative(form_creator)
+        : ""}
 
       <hr>
       ${deleteBtn(form_creator)}
 
+      ${externalEditBtn(form_creator)}
+
     </form>
-  `);
+  `;
     }
     function deleteBtn(form_creator) {
-        return (`
+        return `
     <div>
-      <button type="button" class="f3-delete-btn" ${form_creator.can_delete ? '' : 'disabled'}>
+      <button type="button" class="f3-delete-btn" ${form_creator.can_delete ? "" : "disabled"}>
         Delete
       </button>
     </div>
-  `);
+  `;
+    }
+    function externalEditBtn(form_creator) {
+        // Không cấu hình URL thì không hiện nút
+        if (!form_creator.external_edit_url)
+            return "";
+        const label = form_creator.external_edit_label || "Chỉnh sửa thông tin";
+        return `
+    <div>
+      <button
+        type="button"
+        class="f3-external-edit-btn"
+        data-edit-url="${form_creator.external_edit_url}"
+      >
+        ${label}
+      </button>
+    </div>
+  `;
     }
     function addRelativeBtn(form_creator) {
-        return (`
+        return `
     <span class="f3-add-relative-btn">
-      ${form_creator.addRelativeActive ? userPlusCloseSvgIcon() : userPlusSvgIcon()}
+      ${form_creator.addRelativeActive
+        ? userPlusCloseSvgIcon()
+        : userPlusSvgIcon()}
     </span>
-  `);
+  `;
     }
     function editBtn(form_creator) {
-        return (`
+        return `
     <span class="f3-edit-btn">
       ${form_creator.editable ? pencilOffSvgIcon() : pencilSvgIcon()}
     </span>
-  `);
+  `;
     }
     function fields(form_creator) {
         const forceInfoOnly = form_creator.force_info_only === true;
         if (!form_creator.editable || forceInfoOnly)
             return infoField();
-        let fields_html = '';
-        form_creator.fields.forEach(field => {
-            if (field.type === 'text') {
+        let fields_html = "";
+        form_creator.fields.forEach((field) => {
+            if (field.type === "text") {
                 // Nếu là field "gender" → hiển thị text giới tính nhưng vẫn là input text
-                const isGender = field.id === 'gender';
-                const rawValue = field.initial_value || '';
-                const displayValue = isGender
-                    ? normalizeGender(rawValue)
-                    : rawValue;
+                const isGender = field.id === "gender";
+                const rawValue = field.initial_value || "";
+                const displayValue = isGender ? normalizeGender(rawValue) : rawValue;
                 fields_html += `
       <div class="f3-form-field">
         <label>${field.label}</label>
@@ -2032,67 +2055,67 @@
           placeholder="${field.label}">
       </div>`;
             }
-            else if (field.type === 'textarea') {
+            else if (field.type === "textarea") {
                 fields_html += `
       <div class="f3-form-field">
         <label>${field.label}</label>
         <textarea name="${field.id}" 
-          placeholder="${field.label}">${field.initial_value || ''}</textarea>
+          placeholder="${field.label}">${field.initial_value || ""}</textarea>
       </div>`;
             }
-            else if (field.type === 'select') {
+            else if (field.type === "select") {
                 const select_field = field;
                 fields_html += `
       <div class="f3-form-field">
         <label>${select_field.label}</label>
-        <select name="${select_field.id}" value="${select_field.initial_value || ''}">
+        <select name="${select_field.id}" value="${select_field.initial_value || ""}">
           <option value="">${select_field.placeholder || `Select ${select_field.label}`}</option>
-          ${select_field.options.map((option) => `<option ${option.value === select_field.initial_value ? 'selected' : ''} value="${option.value}">${option.label}</option>`).join('')}
+          ${select_field.options
+                .map((option) => `<option ${option.value === select_field.initial_value ? "selected" : ""} value="${option.value}">${option.label}</option>`)
+                .join("")}
         </select>
       </div>`;
             }
-            else if (field.type === 'rel_reference') {
+            else if (field.type === "rel_reference") {
                 fields_html += `
       <div class="f3-form-field">
         <label>${field.label} - <i>${field.rel_label}</i></label>
         <input type="text" 
           name="${field.id}" 
-          value="${field.initial_value || ''}"
+          value="${field.initial_value || ""}"
           placeholder="${field.label}">
       </div>`;
             }
         });
         return fields_html;
         function infoField() {
-            let fields_html = '';
-            form_creator.fields.forEach(field => {
+            let fields_html = "";
+            form_creator.fields.forEach((field) => {
                 var _a;
-                if (field.type === 'rel_reference') {
+                if (field.type === "rel_reference") {
                     if (!field.initial_value)
                         return;
                     fields_html += `
         <div class="f3-info-field">
           <span class="f3-info-field-label">${field.label} - <i>${field.rel_label}</i></span>
-          <span class="f3-info-field-value">${field.initial_value || ''}</span>
+          <span class="f3-info-field-value">${field.initial_value || ""}</span>
         </div>`;
                 }
-                else if (field.type === 'select') {
+                else if (field.type === "select") {
                     const select_field = field;
                     if (!field.initial_value)
                         return;
                     fields_html += `
         <div class="f3-info-field">
           <span class="f3-info-field-label">${select_field.label}</span>
-          <span class="f3-info-field-value">${((_a = select_field.options.find(option => option.value === select_field.initial_value)) === null || _a === void 0 ? void 0 : _a.label) || ''}</span>
+          <span class="f3-info-field-value">${((_a = select_field.options.find((option) => option.value === select_field.initial_value)) === null || _a === void 0 ? void 0 : _a.label) || ""}</span>
         </div>`;
                 }
                 else {
                     // Các field text (kể cả gender)
-                    const isGender = field.id === 'gender';
-                    const rawValue = field.initial_value || '';
-                    const displayValue = isGender
-                        ? normalizeGender(rawValue)
-                        : rawValue;
+                    const isGender = field.id === "gender";
+                    const rawValue = field.initial_value || "";
+                    const displayValue = isGender ? normalizeGender(rawValue) : rawValue;
                     fields_html += `
         <div class="f3-info-field">
           <span class="f3-info-field-label">${field.label}</span>
@@ -2105,24 +2128,25 @@
     }
     function normalizeGender(value) {
         const v = value.trim().toUpperCase();
-        if (v === 'M' || v === 'NAM')
-            return 'Nam';
-        if (v === 'F' || v === 'NU' || v === 'NỮ')
-            return 'Nữ';
+        if (v === "M" || v === "NAM")
+            return "Nam";
+        if (v === "F" || v === "NU" || v === "NỮ")
+            return "Nữ";
         return value; // nếu là text khác thì giữ nguyên
     }
     function addLinkExistingRelative(form_creator) {
-        const title = form_creator.linkExistingRelative.hasOwnProperty('title')
+        const title = form_creator.linkExistingRelative.hasOwnProperty("title")
             ? form_creator.linkExistingRelative.title
-            : 'Profile already exists?';
-        const select_placeholder = form_creator.linkExistingRelative.hasOwnProperty('select_placeholder')
+            : "Profile already exists?";
+        const select_placeholder = form_creator.linkExistingRelative.hasOwnProperty("select_placeholder")
             ? form_creator.linkExistingRelative.select_placeholder
-            : 'Select profile';
-        const options = form_creator.linkExistingRelative.options;
+            : "Select profile";
+        const options = form_creator.linkExistingRelative
+            .options;
         // Serialize options & placeholder để JS ở dưới có thể đọc lại
         const dataOptions = encodeURIComponent(JSON.stringify(options));
         const dataPlaceholder = encodeURIComponent(select_placeholder);
-        return (`
+        return `
     <div
       class="f3-link-existing-wrapper"
       data-options="${dataOptions}"
@@ -2142,30 +2166,30 @@
         <select class="f3-link-existing-select" size="10">
           <option value="">${select_placeholder}</option>
           ${options
-        .map(option => `<option value="${option.value}">${option.label}</option>`)
-        .join('')}
+        .map((option) => `<option value="${option.value}">${option.label}</option>`)
+        .join("")}
         </select>
       </div>
     </div>
-  `);
+  `;
     }
     function closeBtn() {
-        return (`
+        return `
     <span class="f3-close-btn">
       ×
     </span>
-  `);
+  `;
     }
     function spaceDiv() {
         return `<div style="height: 24px;"></div>`;
     }
     function renderLinkExistingOptions(wrapper, keyword) {
-        const select = wrapper.querySelector('.f3-link-existing-select');
+        const select = wrapper.querySelector(".f3-link-existing-select");
         if (!select)
             return;
         const rawOptions = wrapper.dataset.options
             ? decodeURIComponent(wrapper.dataset.options)
-            : '[]';
+            : "[]";
         let options;
         try {
             options = JSON.parse(rawOptions);
@@ -2175,38 +2199,52 @@
         }
         const placeholder = wrapper.dataset.placeholder
             ? decodeURIComponent(wrapper.dataset.placeholder)
-            : 'Select profile';
+            : "Select profile";
         const normalized = keyword.toLowerCase().trim();
         const filtered = normalized
-            ? options.filter(opt => opt.label.toLowerCase().includes(normalized) ||
+            ? options.filter((opt) => opt.label.toLowerCase().includes(normalized) ||
                 opt.value.toLowerCase().includes(normalized))
             : options;
         // Xóa hết option cũ
-        select.innerHTML = '';
+        select.innerHTML = "";
         // Thêm lại placeholder
-        const placeholderOption = document.createElement('option');
-        placeholderOption.value = '';
+        const placeholderOption = document.createElement("option");
+        placeholderOption.value = "";
         placeholderOption.textContent = placeholder;
         select.appendChild(placeholderOption);
         // Thêm các option đã lọc
-        filtered.forEach(opt => {
-            const o = document.createElement('option');
+        filtered.forEach((opt) => {
+            const o = document.createElement("option");
             o.value = opt.value;
             o.textContent = opt.label;
             select.appendChild(o);
         });
     }
     // Event delegation: chỉ chạy ở môi trường browser
-    if (typeof document !== 'undefined') {
-        document.addEventListener('input', (event) => {
+    if (typeof document !== "undefined") {
+        // Search trong link existing
+        document.addEventListener("input", (event) => {
             const target = event.target;
-            if (!target || !target.classList.contains('f3-link-existing-search'))
+            if (!target || !target.classList.contains("f3-link-existing-search"))
                 return;
-            const wrapper = target.closest('.f3-link-existing-wrapper');
+            const wrapper = target.closest(".f3-link-existing-wrapper");
             if (!wrapper)
                 return;
             const input = target;
-            renderLinkExistingOptions(wrapper, input.value || '');
+            renderLinkExistingOptions(wrapper, input.value || "");
+        });
+        // Click external edit
+        document.addEventListener("click", (event) => {
+            const target = event.target;
+            if (!target)
+                return;
+            const btn = target.closest(".f3-external-edit-btn");
+            if (!btn)
+                return;
+            const url = btn.getAttribute("data-edit-url");
+            if (!url)
+                return;
+            window.open(url, '_blank', 'noopener,noreferrer');
         });
     }
 
@@ -4288,6 +4326,18 @@
                 };
             }
             const form_creator = formCreatorSetup(Object.assign({ store: this.store, datum, postSubmitHandler: (props) => postSubmitHandler(this, props), fields: this.fields, onCancel: () => { }, editFirst: this.editFirst, no_edit: this.no_edit, link_existing_rel_config: this.link_existing_rel_config, onFormCreation: this.onFormCreation, onSubmit: this.onSubmit, onDelete: this.onDelete, canEdit: this.canEdit, canDelete: this.canDelete }, props));
+            const formCreatorWithExternal = form_creator;
+            if (this.externalEditUrlBuilder) {
+                try {
+                    formCreatorWithExternal.external_edit_url = this.externalEditUrlBuilder(datum);
+                }
+                catch (err) {
+                    console.error("Error building external edit url", err);
+                }
+            }
+            if (this.externalEditLabel) {
+                formCreatorWithExternal.external_edit_label = this.externalEditLabel;
+            }
             const form_cont = is_new_rel
                 ? (this.createFormNew || createFormNew)(form_creator, this.closeForm.bind(this))
                 : (this.createFormEdit || createFormEdit)(form_creator, this.closeForm.bind(this));
@@ -4458,6 +4508,11 @@
         }
         setCreateFormNew(createFormNew) {
             this.createFormNew = createFormNew;
+            return this;
+        }
+        setExternalEditLink(config) {
+            this.externalEditUrlBuilder = config.buildUrl;
+            this.externalEditLabel = config.label || 'Edit full profile';
             return this;
         }
         _getStoreDataCopy() {

@@ -167,6 +167,20 @@
   cursor: not-allowed;
 }
 
+.f3-form .f3-external-edit-btn {
+  background-color: transparent;
+  border: 1px solid #4CAF50;
+  color: #4CAF50;
+  width: 100%;
+  padding: 5px 10px;
+}
+
+.f3-external-edit-btn:hover {
+  background-color: #16a34a;
+  border-color: #16a34a;
+  color: #fff;
+}
+
 .f3-form .f3-remove-relative-btn {
   background-color: transparent;
   border: 1px solid currentColor;

@@ -92,6 +92,10 @@
           { type: "text", label: "Ngày mất", id: "date_of_death" },
         ])
         .setEditFirst(true)
+        .setExternalEditLink({
+          buildUrl: (d) => `/classroom/member/edit`,
+          label: 'Chỉnh sửa chi tiết', // tuỳ chọn
+        })
         .setLinkExistingRelConfig({
           title: "Thêm người từ danh sách có sẵn",
           select_placeholder: "Chọn một người...",

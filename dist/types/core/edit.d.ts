@@ -68,6 +68,8 @@ export declare class EditTree {
     onDelete: FormCreatorSetupProps['onDelete'];
     canEdit: FormCreatorSetupProps['canEdit'];
     canDelete: FormCreatorSetupProps['canDelete'];
+    externalEditUrlBuilder?: (datum: Datum) => string;
+    externalEditLabel?: string;
     constructor(cont: HTMLElement, store: Store);
     /**
      * Open the edit form
@@ -112,6 +114,10 @@ export declare class EditTree {
     setOnFormCreation(onFormCreation: EditTree['onFormCreation']): this;
     setCreateFormEdit(createFormEdit: EditTree['createFormEdit']): this;
     setCreateFormNew(createFormNew: EditTree['createFormNew']): this;
+    setExternalEditLink(config: {
+        buildUrl: (datum: Datum) => string;
+        label?: string;
+    }): this;
     private _getStoreDataCopy;
     /**
      * deprecated: use exportData instead. This function will be removed in a future version.

@@ -76,6 +76,9 @@ export class EditTree {
   canEdit: FormCreatorSetupProps['canEdit']
   canDelete: FormCreatorSetupProps['canDelete']
   
+  externalEditUrlBuilder?: (datum: Datum) => string
+  externalEditLabel?: string
+
   constructor(cont: HTMLElement, store: Store) {
     this.cont = cont
     this.store = store
@@ -281,6 +284,23 @@ export class EditTree {
       canDelete: this.canDelete,
       ...props
     })
+
+    const formCreatorWithExternal = form_creator as FormCreator & {
+      external_edit_url?: string
+      external_edit_label?: string
+    }
+
+    if (this.externalEditUrlBuilder) {
+      try {
+        formCreatorWithExternal.external_edit_url = this.externalEditUrlBuilder(datum)
+      } catch (err) {
+        console.error("Error building external edit url", err)
+      }
+    }
+
+    if (this.externalEditLabel) {
+      formCreatorWithExternal.external_edit_label = this.externalEditLabel
+    }
   
     const form_cont = is_new_rel
       ? (this.createFormNew || createFormNew)(form_creator as NewRelFormCreator, this.closeForm.bind(this))
@@ -475,6 +495,12 @@ export class EditTree {
   
   setCreateFormNew(createFormNew: EditTree['createFormNew']) {
     this.createFormNew = createFormNew
+    return this
+  }
+
+   setExternalEditLink(config: { buildUrl: (datum: Datum) => string; label?: string }) {
+    this.externalEditUrlBuilder = config.buildUrl
+    this.externalEditLabel = config.label || 'Edit full profile'
     return this
   }
   

@@ -8,7 +8,7 @@ export function getHtmlNew(form_creator: NewRelFormCreator) {
       ${closeBtn()}
       <h3 class="f3-form-title">${form_creator.title}</h3>
 
-      ${fields(form_creator)}
+
 
       ${form_creator.linkExistingRelative ? addLinkExistingRelative(form_creator) : ''}
     </form>

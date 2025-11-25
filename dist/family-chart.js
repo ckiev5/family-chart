@@ -1960,9 +1960,8 @@
     <form id="familyForm" class="f3-form">
       ${closeBtn()}
       <h3 class="f3-form-title">${form_creator.title}</h3>
-      ${genderInfoField(form_creator)}
 
-      ${fields(form_creator)}
+
 
       ${form_creator.linkExistingRelative ? addLinkExistingRelative(form_creator) : ''}
     </form>
@@ -1977,8 +1976,6 @@
         ${!form_creator.no_edit ? addRelativeBtn(form_creator) : ''}
         ${form_creator.no_edit ? spaceDiv() : editBtn(form_creator)}
       </div>
-
-      ${genderInfoField(readOnlyFormCreator)}
 
       ${fields(readOnlyFormCreator)}
 
@@ -2013,27 +2010,6 @@
     </span>
   `);
     }
-    function genderInfoField(form_creator) {
-        const g = form_creator.gender_field;
-        // Nếu không có cấu hình giới tính thì bỏ qua
-        if (!g || !Array.isArray(g.options))
-            return '';
-        // Label hiển thị, nếu không có thì dùng "Giới tính"
-        const label = g.label || 'Giới tính';
-        // Tìm option đang được chọn theo initial_value
-        const selected = g.options.find(opt => opt.value === g.initial_value);
-        const text = selected ? selected.label : '';
-        // Nếu chưa có giá trị giới tính thì cũng có thể ẩn luôn dòng này
-        if (!text)
-            return '';
-        // Hiển thị giống các info-field khác
-        return (`
-    <div class="f3-info-field">
-      <span class="f3-info-field-label">${label}</span>
-      <span class="f3-info-field-value">${text}</span>
-    </div>
-  `);
-    }
     function fields(form_creator) {
         const forceInfoOnly = form_creator.force_info_only === true;
         if (!form_creator.editable || forceInfoOnly)
@@ -2041,12 +2017,18 @@
         let fields_html = '';
         form_creator.fields.forEach(field => {
             if (field.type === 'text') {
+                // Nếu là field "gender" → hiển thị text giới tính nhưng vẫn là input text
+                const isGender = field.id === 'gender';
+                const rawValue = field.initial_value || '';
+                const displayValue = isGender
+                    ? normalizeGender(rawValue)
+                    : rawValue;
                 fields_html += `
       <div class="f3-form-field">
         <label>${field.label}</label>
         <input type="${field.type}" 
           name="${field.id}" 
-          value="${field.initial_value || ''}"
+          value="${displayValue}"
           placeholder="${field.label}">
       </div>`;
             }
@@ -2105,15 +2087,29 @@
         </div>`;
                 }
                 else {
+                    // Các field text (kể cả gender)
+                    const isGender = field.id === 'gender';
+                    const rawValue = field.initial_value || '';
+                    const displayValue = isGender
+                        ? normalizeGender(rawValue)
+                        : rawValue;
                     fields_html += `
         <div class="f3-info-field">
           <span class="f3-info-field-label">${field.label}</span>
-          <span class="f3-info-field-value">${field.initial_value || ''}</span>
+          <span class="f3-info-field-value">${displayValue}</span>
         </div>`;
                 }
             });
             return fields_html;
         }
+    }
+    function normalizeGender(value) {
+        const v = value.trim().toUpperCase();
+        if (v === 'M' || v === 'NAM')
+            return 'Nam';
+        if (v === 'F' || v === 'NU' || v === 'NỮ')
+            return 'Nữ';
+        return value; // nếu là text khác thì giữ nguyên
     }
     function addLinkExistingRelative(form_creator) {
         const title = form_creator.linkExistingRelative.hasOwnProperty('title')
@@ -3870,11 +3866,11 @@
         }
         addRelLabelsDefault() {
             return {
-                father: 'Add Father',
-                mother: 'Add Mother',
-                spouse: 'Add Spouse',
-                son: 'Add Son',
-                daughter: 'Add Daughter'
+                father: 'Thêm Cha',
+                mother: 'Thêm Mẹ',
+                spouse: 'Thêm Vợ/Chồng',
+                son: 'Thêm Con Trai',
+                daughter: 'Thêm Con Gái',
             };
         }
         getStoreData() {

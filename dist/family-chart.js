@@ -1,4 +1,4 @@
-// https://donatso.github.io/family-chart/ v0.9.0 Copyright 2025 donatso
+// https://donatso.github.io/family-chart/ v0.9.0 Copyright 2026 donatso
 (function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3')) :
     typeof define === 'function' && define.amd ? define(['exports', 'd3'], factory) :
@@ -2037,30 +2037,35 @@
     }
     function fields(form_creator) {
         const forceInfoOnly = form_creator.force_info_only === true;
-        if (!form_creator.editable || forceInfoOnly)
-            return infoField();
-        let fields_html = "";
-        form_creator.fields.forEach((field) => {
+        // ✅ Tách image fields ra để luôn render lên đầu
+        const imageFields = form_creator.fields.filter((f) => f.type === "image");
+        const otherFields = form_creator.fields.filter((f) => f.type !== "image");
+        // ✅ Render avatar/header (nếu có)
+        const imageHeaderHtml = renderImageHeader(imageFields);
+        if (!form_creator.editable || forceInfoOnly) {
+            return imageHeaderHtml + infoField(otherFields);
+        }
+        let fields_html = imageHeaderHtml;
+        otherFields.forEach((field) => {
             if (field.type === "text") {
-                // Nếu là field "gender" → hiển thị text giới tính nhưng vẫn là input text
                 const isGender = field.id === "gender";
                 const rawValue = field.initial_value || "";
                 const displayValue = isGender ? normalizeGender(rawValue) : rawValue;
                 fields_html += `
       <div class="f3-form-field">
         <label>${field.label}</label>
-        <input type="${field.type}" 
-          name="${field.id}" 
-          value="${displayValue}"
-          placeholder="${field.label}">
+        <input type="text"
+          name="${field.id}"
+          value="${escapeHtmlAttr(displayValue)}"
+          placeholder="${escapeHtmlAttr(field.label)}">
       </div>`;
             }
             else if (field.type === "textarea") {
                 fields_html += `
       <div class="f3-form-field">
         <label>${field.label}</label>
-        <textarea name="${field.id}" 
-          placeholder="${field.label}">${field.initial_value || ""}</textarea>
+        <textarea name="${field.id}"
+          placeholder="${escapeHtmlAttr(field.label)}">${escapeHtmlText(field.initial_value || "")}</textarea>
       </div>`;
             }
             else if (field.type === "select") {
@@ -2068,10 +2073,13 @@
                 fields_html += `
       <div class="f3-form-field">
         <label>${select_field.label}</label>
-        <select name="${select_field.id}" value="${select_field.initial_value || ""}">
+        <select name="${select_field.id}">
           <option value="">${select_field.placeholder || `Select ${select_field.label}`}</option>
           ${select_field.options
-                .map((option) => `<option ${option.value === select_field.initial_value ? "selected" : ""} value="${option.value}">${option.label}</option>`)
+                .map((option) => {
+                const selected = option.value === select_field.initial_value ? "selected" : "";
+                return `<option ${selected} value="${escapeHtmlAttr(option.value)}">${escapeHtmlText(option.label)}</option>`;
+            })
                 .join("")}
         </select>
       </div>`;
@@ -2080,17 +2088,37 @@
                 fields_html += `
       <div class="f3-form-field">
         <label>${field.label} - <i>${field.rel_label}</i></label>
-        <input type="text" 
-          name="${field.id}" 
-          value="${field.initial_value || ""}"
-          placeholder="${field.label}">
+        <input type="text"
+          name="${field.id}"
+          value="${escapeHtmlAttr(field.initial_value || "")}"
+          placeholder="${escapeHtmlAttr(field.label)}">
       </div>`;
             }
         });
         return fields_html;
-        function infoField() {
+        // --------------------------
+        // Helpers
+        // --------------------------
+        function renderImageHeader(fields) {
+            if (!fields || fields.length === 0)
+                return "";
+            // bạn có thể hỗ trợ nhiều ảnh; ở đây lấy cái đầu tiên làm avatar
+            const avatarField = fields[0];
+            const src = (avatarField === null || avatarField === void 0 ? void 0 : avatarField.initial_value) || "";
+            if (!src)
+                return "";
+            const label = (avatarField === null || avatarField === void 0 ? void 0 : avatarField.label) || "";
+            // ✅ UI avatar nằm trên cùng
+            return `
+      <div class="f3-form-avatar">
+        ${label ? `<div class="f3-form-avatar-label">${escapeHtmlText(label)}</div>` : ""}
+        <img class="f3-form-avatar-img" src="${escapeHtmlAttr(src)}" alt="avatar">
+      </div>
+    `;
+        }
+        function infoField(fieldsList) {
             let fields_html = "";
-            form_creator.fields.forEach((field) => {
+            fieldsList.forEach((field) => {
                 var _a;
                 if (field.type === "rel_reference") {
                     if (!field.initial_value)
@@ -2098,32 +2126,45 @@
                     fields_html += `
         <div class="f3-info-field">
           <span class="f3-info-field-label">${field.label} - <i>${field.rel_label}</i></span>
-          <span class="f3-info-field-value">${field.initial_value || ""}</span>
+          <span class="f3-info-field-value">${escapeHtmlText(field.initial_value || "")}</span>
         </div>`;
                 }
                 else if (field.type === "select") {
                     const select_field = field;
-                    if (!field.initial_value)
+                    if (!select_field.initial_value)
                         return;
+                    const label = ((_a = select_field.options.find((option) => option.value === select_field.initial_value)) === null || _a === void 0 ? void 0 : _a.label) || "";
                     fields_html += `
         <div class="f3-info-field">
           <span class="f3-info-field-label">${select_field.label}</span>
-          <span class="f3-info-field-value">${((_a = select_field.options.find((option) => option.value === select_field.initial_value)) === null || _a === void 0 ? void 0 : _a.label) || ""}</span>
+          <span class="f3-info-field-value">${escapeHtmlText(label)}</span>
         </div>`;
                 }
                 else {
-                    // Các field text (kể cả gender)
                     const isGender = field.id === "gender";
                     const rawValue = field.initial_value || "";
                     const displayValue = isGender ? normalizeGender(rawValue) : rawValue;
                     fields_html += `
         <div class="f3-info-field">
           <span class="f3-info-field-label">${field.label}</span>
-          <span class="f3-info-field-value">${displayValue}</span>
+          <span class="f3-info-field-value">${escapeHtmlText(displayValue)}</span>
         </div>`;
                 }
             });
             return fields_html;
+        }
+        function escapeHtmlAttr(value) {
+            return String(value !== null && value !== void 0 ? value : "")
+                .replace(/&/g, "&amp;")
+                .replace(/"/g, "&quot;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+        }
+        function escapeHtmlText(value) {
+            return String(value !== null && value !== void 0 ? value : "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
         }
     }
     function normalizeGender(value) {

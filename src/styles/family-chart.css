@@ -921,8 +921,8 @@
 }
 
 .f3-form-avatar-img{
-  width:96px;
-  height:96px;
+  width:150px;
+  height:150px;
   border-radius:5px;
   object-fit:cover;
 }

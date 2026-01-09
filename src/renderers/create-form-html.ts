@@ -183,31 +183,6 @@ function genderInfoField(
 
 function fields(form_creator: EditDatumFormCreator | NewRelFormCreator) {
   const forceInfoOnly = (form_creator as any).force_info_only === true;
-
-  // 🔴 LOG SO SÁNH DEV vs PROD
-  if (typeof window !== "undefined") {
-    console.group(
-      `%c[f3 fields] ENV = ${process.env.NODE_ENV}`,
-      "color: yellow; font-weight: bold"
-    );
-
-    console.log("editable:", (form_creator as any).editable);
-    console.log("forceInfoOnly:", forceInfoOnly);
-
-    console.log(
-      "RAW fields:",
-      form_creator.fields.map((f: any) => ({
-        id: f.id,
-        type: f.type,
-        label: f.label,
-        initial_value: f.initial_value,
-        value: f.value,
-        keys: Object.keys(f),
-      }))
-    );
-
-    console.groupEnd();
-  }
   
   // ✅ Tách image fields ra để luôn render lên đầu
   const imageFields = form_creator.fields.filter(
@@ -218,7 +193,7 @@ function fields(form_creator: EditDatumFormCreator | NewRelFormCreator) {
   const otherFields = form_creator.fields.filter((f: any) => f.type !== "image");
 
   // ✅ Render avatar/header (nếu có)
-  const imageHeaderHtml = renderImageHeader(imageFields);
+  const imageHeaderHtml = renderImageHeaderFromData(form_creator);
 
  if (!form_creator.editable || forceInfoOnly) {
   return imageHeaderHtml + infoField(
@@ -290,28 +265,28 @@ function fields(form_creator: EditDatumFormCreator | NewRelFormCreator) {
   // Helpers
   // --------------------------
 
-  function renderImageHeader(fields: any[]) {
-    if (!fields || fields.length === 0) return "";
+  function renderImageHeaderFromData(form_creator: any) {
+  const src =
+    form_creator?.data?.avatar ||
+    form_creator?.data?.["avatar"];
 
-    // bạn có thể hỗ trợ nhiều ảnh; ở đây lấy cái đầu tiên làm avatar
-    const avatarField = fields[0];
-    const src =
-  avatarField?.initial_value ??
-  avatarField?.value ??
-  "";
-    if (!src) return "";
+  if (!src) return "";
 
-    const label = avatarField?.label || "";
+  const label =
+    form_creator.fields?.find((f: any) => f.id === "avatar")?.label ||
+    "Ảnh đại diện";
 
-    // ✅ UI avatar nằm trên cùng
-    return `
-      <div class="f3-form-avatar">
-        ${label ? `<div class="f3-form-avatar-label">${escapeHtmlText(label)}</div>` : ""}
-        <img class="f3-form-avatar-img" src="${escapeHtmlAttr(src)}" alt="avatar">
-      </div>
-    `;
-  }
-
+  return `
+    <div class="f3-form-avatar">
+      <div class="f3-form-avatar-label">${label}</div>
+      <img
+        class="f3-form-avatar-img"
+        src="${escapeHtmlAttr(src)}"
+        alt="avatar"
+      />
+    </div>
+  `;
+}
   function infoField(fieldsList: any[]) {
     let fields_html = "";
 

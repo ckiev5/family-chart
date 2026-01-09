@@ -2014,27 +2014,12 @@ function editBtn(form_creator) {
 }
 function fields(form_creator) {
     const forceInfoOnly = form_creator.force_info_only === true;
-    // 🔴 LOG SO SÁNH DEV vs PROD
-    if (typeof window !== "undefined") {
-        console.group(`%c[f3 fields] ENV = ${process.env.NODE_ENV}`, "color: yellow; font-weight: bold");
-        console.log("editable:", form_creator.editable);
-        console.log("forceInfoOnly:", forceInfoOnly);
-        console.log("RAW fields:", form_creator.fields.map((f) => ({
-            id: f.id,
-            type: f.type,
-            label: f.label,
-            initial_value: f.initial_value,
-            value: f.value,
-            keys: Object.keys(f),
-        })));
-        console.groupEnd();
-    }
     // ✅ Tách image fields ra để luôn render lên đầu
-    const imageFields = form_creator.fields.filter((f) => f.id === "avatar" ||
+    form_creator.fields.filter((f) => f.id === "avatar" ||
         f.type === "image");
     const otherFields = form_creator.fields.filter((f) => f.type !== "image");
     // ✅ Render avatar/header (nếu có)
-    const imageHeaderHtml = renderImageHeader(imageFields);
+    const imageHeaderHtml = renderImageHeaderFromData(form_creator);
     if (!form_creator.editable || forceInfoOnly) {
         return imageHeaderHtml + infoField(otherFields.filter((f) => f.id !== "avatar"));
     }
@@ -2092,23 +2077,24 @@ function fields(form_creator) {
     // --------------------------
     // Helpers
     // --------------------------
-    function renderImageHeader(fields) {
-        var _a, _b;
-        if (!fields || fields.length === 0)
-            return "";
-        // bạn có thể hỗ trợ nhiều ảnh; ở đây lấy cái đầu tiên làm avatar
-        const avatarField = fields[0];
-        const src = (_b = (_a = avatarField === null || avatarField === void 0 ? void 0 : avatarField.initial_value) !== null && _a !== void 0 ? _a : avatarField === null || avatarField === void 0 ? void 0 : avatarField.value) !== null && _b !== void 0 ? _b : "";
+    function renderImageHeaderFromData(form_creator) {
+        var _a, _b, _c, _d;
+        const src = ((_a = form_creator === null || form_creator === void 0 ? void 0 : form_creator.data) === null || _a === void 0 ? void 0 : _a.avatar) ||
+            ((_b = form_creator === null || form_creator === void 0 ? void 0 : form_creator.data) === null || _b === void 0 ? void 0 : _b["avatar"]);
         if (!src)
             return "";
-        const label = (avatarField === null || avatarField === void 0 ? void 0 : avatarField.label) || "";
-        // ✅ UI avatar nằm trên cùng
+        const label = ((_d = (_c = form_creator.fields) === null || _c === void 0 ? void 0 : _c.find((f) => f.id === "avatar")) === null || _d === void 0 ? void 0 : _d.label) ||
+            "Ảnh đại diện";
         return `
-      <div class="f3-form-avatar">
-        ${label ? `<div class="f3-form-avatar-label">${escapeHtmlText(label)}</div>` : ""}
-        <img class="f3-form-avatar-img" src="${escapeHtmlAttr(src)}" alt="avatar">
-      </div>
-    `;
+    <div class="f3-form-avatar">
+      <div class="f3-form-avatar-label">${label}</div>
+      <img
+        class="f3-form-avatar-img"
+        src="${escapeHtmlAttr(src)}"
+        alt="avatar"
+      />
+    </div>
+  `;
     }
     function infoField(fieldsList) {
         let fields_html = "";

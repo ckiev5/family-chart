@@ -193,13 +193,11 @@ function fields(form_creator: EditDatumFormCreator | NewRelFormCreator) {
   const otherFields = form_creator.fields.filter((f: any) => f.type !== "image");
 
   // ✅ Render avatar/header (nếu có)
-  const imageHeaderHtml = renderImageHeaderFromData(form_creator);
+  const imageHeaderHtml = renderImageHeader(imageFields);
 
- if (!form_creator.editable || forceInfoOnly) {
-  return imageHeaderHtml + infoField(
-    otherFields.filter((f) => f.id !== "avatar")
-  );
-}
+  if (!form_creator.editable || forceInfoOnly) {
+    return imageHeaderHtml + infoField(otherFields);
+  }
 
   let fields_html = imageHeaderHtml;
 
@@ -265,28 +263,28 @@ function fields(form_creator: EditDatumFormCreator | NewRelFormCreator) {
   // Helpers
   // --------------------------
 
-  function renderImageHeaderFromData(form_creator: any) {
-  const src =
-    form_creator?.data?.avatar ||
-    form_creator?.data?.["avatar"];
+  function renderImageHeader(fields: any[]) {
+    if (!fields || fields.length === 0) return "";
 
-  if (!src) return "";
+    // bạn có thể hỗ trợ nhiều ảnh; ở đây lấy cái đầu tiên làm avatar
+    const avatarField = fields[0];
+    const src =
+  avatarField?.initial_value ??
+  avatarField?.value ??
+  "";
+    if (!src) return "";
 
-  const label =
-    form_creator.fields?.find((f: any) => f.id === "avatar")?.label ||
-    "Ảnh đại diện";
+    const label = avatarField?.label || "";
 
-  return `
-    <div class="f3-form-avatar">
-      <div class="f3-form-avatar-label">${label}</div>
-      <img
-        class="f3-form-avatar-img"
-        src="${escapeHtmlAttr(src)}"
-        alt="avatar"
-      />
-    </div>
-  `;
-}
+    // ✅ UI avatar nằm trên cùng
+    return `
+      <div class="f3-form-avatar">
+        ${label ? `<div class="f3-form-avatar-label">${escapeHtmlText(label)}</div>` : ""}
+        <img class="f3-form-avatar-img" src="${escapeHtmlAttr(src)}" alt="avatar">
+      </div>
+    `;
+  }
+
   function infoField(fieldsList: any[]) {
     let fields_html = "";
 

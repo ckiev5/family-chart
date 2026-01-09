@@ -2014,6 +2014,21 @@ function editBtn(form_creator) {
 }
 function fields(form_creator) {
     const forceInfoOnly = form_creator.force_info_only === true;
+    // 🔴 LOG SO SÁNH DEV vs PROD
+    if (typeof window !== "undefined") {
+        console.group(`%c[f3 fields] ENV = ${process.env.NODE_ENV}`, "color: yellow; font-weight: bold");
+        console.log("editable:", form_creator.editable);
+        console.log("forceInfoOnly:", forceInfoOnly);
+        console.log("RAW fields:", form_creator.fields.map((f) => ({
+            id: f.id,
+            type: f.type,
+            label: f.label,
+            initial_value: f.initial_value,
+            value: f.value,
+            keys: Object.keys(f),
+        })));
+        console.groupEnd();
+    }
     // ✅ Tách image fields ra để luôn render lên đầu
     const imageFields = form_creator.fields.filter((f) => f.id === "avatar" ||
         f.type === "image");
@@ -2021,7 +2036,7 @@ function fields(form_creator) {
     // ✅ Render avatar/header (nếu có)
     const imageHeaderHtml = renderImageHeader(imageFields);
     if (!form_creator.editable || forceInfoOnly) {
-        return imageHeaderHtml + infoField(otherFields);
+        return imageHeaderHtml + infoField(otherFields.filter((f) => f.id !== "avatar"));
     }
     let fields_html = imageHeaderHtml;
     otherFields.forEach((field) => {

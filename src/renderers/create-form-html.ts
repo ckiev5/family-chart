@@ -185,7 +185,11 @@ function fields(form_creator: EditDatumFormCreator | NewRelFormCreator) {
   const forceInfoOnly = (form_creator as any).force_info_only === true;
 
   // ✅ Tách image fields ra để luôn render lên đầu
-  const imageFields = form_creator.fields.filter((f: any) => f.type === "image");
+  const imageFields = form_creator.fields.filter(
+  (f: any) =>
+    f.id === "avatar" ||
+    f.type === "image"
+);
   const otherFields = form_creator.fields.filter((f: any) => f.type !== "image");
 
   // ✅ Render avatar/header (nếu có)
@@ -264,7 +268,10 @@ function fields(form_creator: EditDatumFormCreator | NewRelFormCreator) {
 
     // bạn có thể hỗ trợ nhiều ảnh; ở đây lấy cái đầu tiên làm avatar
     const avatarField = fields[0];
-    const src = avatarField?.initial_value || "";
+    const src =
+  avatarField?.initial_value ??
+  avatarField?.value ??
+  "";
     if (!src) return "";
 
     const label = avatarField?.label || "";

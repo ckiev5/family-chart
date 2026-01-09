@@ -2015,7 +2015,8 @@ function editBtn(form_creator) {
 function fields(form_creator) {
     const forceInfoOnly = form_creator.force_info_only === true;
     // ✅ Tách image fields ra để luôn render lên đầu
-    const imageFields = form_creator.fields.filter((f) => f.type === "image");
+    const imageFields = form_creator.fields.filter((f) => f.id === "avatar" ||
+        f.type === "image");
     const otherFields = form_creator.fields.filter((f) => f.type !== "image");
     // ✅ Render avatar/header (nếu có)
     const imageHeaderHtml = renderImageHeader(imageFields);
@@ -2077,11 +2078,12 @@ function fields(form_creator) {
     // Helpers
     // --------------------------
     function renderImageHeader(fields) {
+        var _a, _b;
         if (!fields || fields.length === 0)
             return "";
         // bạn có thể hỗ trợ nhiều ảnh; ở đây lấy cái đầu tiên làm avatar
         const avatarField = fields[0];
-        const src = (avatarField === null || avatarField === void 0 ? void 0 : avatarField.initial_value) || "";
+        const src = (_b = (_a = avatarField === null || avatarField === void 0 ? void 0 : avatarField.initial_value) !== null && _a !== void 0 ? _a : avatarField === null || avatarField === void 0 ? void 0 : avatarField.value) !== null && _b !== void 0 ? _b : "";
         if (!src)
             return "";
         const label = (avatarField === null || avatarField === void 0 ? void 0 : avatarField.label) || "";
